@@ -386,20 +386,39 @@ At the time of Tolman's publication there existed two schools of thought trying 
 
 The other group of psychologists claimed that the brain is more like a map. As the animal moves around and explores the environment, the brain relates consecutive places and experiences together, resulting in a graph of  connections resembling a map-like structure. Such type of learning can occur even in the absence of reward. At a later point in time, the animal can use its internal \textit{cognitive map} to plan ahead. 
 
-I would like to point out a striking resemblance between stimulus-response theory and the modern deep reinforcement learning algorithms such as deep Q-learning. This approach has led to many success stories (AlphaGo, AlphaStar, ...). Does this mean that the biological brains should also use stimulus-response framework?
+I would like to point out a striking resemblance between stimulus-response theory and the modern deep reinforcement learning algorithms such as deep Q-learning. This approach has led to many success stories (AlphaGo, AlphaStar...). Does this mean that the biological brains should also use stimulus-response framework?
 
 \subsubsection{Grid cells, place cells and the hippocampus}
 Since the formulation of cognitive map hypothesis, neuroscience has provided us with plethora of evidence in its favour.
 
- Interestingly we do not yet have any successful artificial agents, whose intelligence would be based on cognitive maps. We do, nonetheless, have some promising algorithms and proofs of the concept. 
+In 1971, John O'Keefe and Jonathan Dostrovsky performed one of the first experiments demonstrating significance of hippocampus in spacial navigation. By placing electrodes in a rat's brain and measuring activity of neurons, they noticed that some of them would only fire whenever the  rat was in a specific place of the testing platform. These neurons were later termed as \textit{place cells}.
 
+In 2005, Edvard Moser and May-Britt Moser, discovered neurons in medial entorhinal cortex that would respond whenever a rat was in one of several places. When plotted in two dimensions, those places would be arranged in a hexagonal grid-like pattern. Such neurons have been termed as \textit{grid cells}. In 2014 both of those discoveries won a Nobel Prize in Physiology and Medicine. 
 
+Another similar type of neurons are the \textit{head-direction cells}, which can be found in many different brain areas. Their response becomes strongest whenever the animal's head is facing a specific direction. Grid, place and head-direction cells have been observed in many different species, but the brains of primates have several unique features and neurons not found anywhere else. One of them are spacial-view cells, which activate whenever a primate is looking at a specific place. All these types of cells are summarised on figure  \ref{fig:place_grid_head_view_cells}.
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=12cm]{place_grid_head_view_cells}
+	\caption{A schematic representing activations of different cell types. The location and direction of arrow corresponds to place and direction of a rat's head. Arrow length depicts the firing rate of a neuron.}
+	\label{fig:place_grid_head_view_cells}
+\end{figure}
+
+Entorhinal cortex hosts boundary-vector cells, which fire whenever the animal finds itself in specific distance and orientation to some environmental boundary, such as walls, holes or impenetrable objects.  There are also many other type of object-vector cells, which fire in response to any object being located in a specific place relative to the agent \cite{vector_trace_cells}.
+
+The activation patterns of grid cells are not always regular. Often the shape of the environment has a significant impact on them. Krupic et al. has performed many experiments investigating this phenomenon (fig \ref{fig:kurpic}). The boundary-vector cells may also have an influence on grid and place cells \cite{boundary_vector_cells}.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=12cm]{kurpic}
 	\caption{Histograms showing the effect of compartment shape on the grid cell firing fields. Experiment by Krupic et al. (2015).}
 	\label{fig:kurpic}
 \end{figure}
+Certain species of mammals, such as bats, can fly and their place and grid cells fire in three-dimensional patterns. An interesting finding was that even grounded animals, such as rats,
+can exhibit three-dimensional activation patterns if placed in environments that allow climbing in all directions \cite{grid_cells_3d}. This suggests that mechanisms behind these neurons are general, flexible and adaptable to many situations.
+It has been found that rat hippocampus contains cells that do not only code for location, but can represent sound frequencies (if trained that turning a lever to produce a specific pitch results in reward), counting (number of laps when moving in circular track), logical dependencies between cues and rewards (moving left or right in a T-maze depending on what happens before), or potentially any abstract knowledge about the environment \cite{hippocampus_abstract_geometry}. 
+
+Place cells do not only code for current location, but they can also fire in sequences that predict future paths that the rat will take \cite{place_cell_sequences}. For this reason, hippocampus is thought to play an essential role in planning. This led to formulation of predictive map hypothesis, which states that the place cells do not code for current location, but rather predict the next state of the animal \cite{predictive_map}. After a rat traces some path and the corresponding place cells fire at each intermediate location, the same sequence of  neurons is then replayed again but in reverse order. This mechanism is called \textit{sharp-wave-ripple} and is thought to be important for formation of episodic memory \cite{shard_wave_ripple}\cite{alternating_sequences}. It is believed that planning into the future and remembering the past might reuse the same underlying mechanisms \cite{past_and_future}.  The generality of abstract knowledge represented in hippocampus is a sign that the mechanism responsible for emergence of place cells could be also used to explain higher cognitive functions in other parts of the brain.
+
+From neuroscientific perspective, the cognitive map theory looks appealing and credible. In the field of computer science we do not yet have any successful artificial agents, whose intelligence would be based on mechanisms resembling cognitive maps. We do, nonetheless, have some promising algorithms and proofs of the concept. 
 
 
 \subsubsection{Successor representation spectrum}
@@ -445,6 +464,8 @@ Successor representation is efficient and allows us to use many tools of spectra
 
 Another candidate algorithm for explaining emergence of cognitive maps, is the \textit{slow feature analysis} (SFA). It is capable of generating grid cells, place cells, head-direction cells, simple and complex cells of V1, and so on. To the best of my knowledge it is the only algorithm capable of generating such a wide range of receptive fields, using nothing more than visual stimulus (agent has no direct knowledge of state $s$). 
 
+\textit{Slowness principle} states that the sensory stimulus should be consistent in time and change continuously. Objects do not appear and disappear suddenly, but rather come into and out of agent's view gradually. Similar stimulus signals that are received closely in time, are likely to come from the same object. This reasoning can be captured more formally. 
+
 Given an input signal $x(t)=[x_1(t),...,x_I(t)]^T$ evolving in time $t\in[t_0,t_1]$, we attempt to find a  function $g(x)=[g_1(x),...,g_J(x)]^T:\mathbb{R}^I\rightarrow \mathbb{R}^J$, such that the output $y(t)=[y_1(t),...,y_J(t)]$ with $y_j(t)=g_j(x(t))$ changes as slowly as possible. 
 Formally, we seek to minimise the squared derivative $\langle \dot{y}_j^2 \rangle$,
 where angle brackets denote the integral
@@ -474,20 +495,75 @@ Assume that the functions $h_k$ have been chosen in such a way that $z(t)$ has z
 	\langle y_j^2 \rangle &=  \boldsymbol{w}_j^T \langle z z^T \rangle \boldsymbol{w}_j = \boldsymbol{w}_j^T \textbf{I} \boldsymbol{w}_j = \boldsymbol{w}_j^T \boldsymbol{w}_j  = 1 \\
 	\forall_{j' < j} \langle y_{j'} y_j \rangle &= \boldsymbol{w}_{j'}^T \langle z z^T \rangle \boldsymbol{w}_j = \boldsymbol{w}_{j'}^T \textbf{I} \boldsymbol{w}_j = \boldsymbol{w}_{j'}^T \boldsymbol{w}_j = 0 \\ 
 \end{align*}
-This means that the constraints on $y$ will be fulfilled if we can guarantee that $\boldsymbol{W}$ is orthonormal.  For the first $y_1$, the decorrelation constraint is vacuously true, thus problem reduces to finding the normed  vector $\boldsymbol{w}_j$ that minimises $\langle y_1 \rangle$. The solution is obtained by finding the smallest eigenvector of covariance matrix $\langle \dot{z} \dot{z}^T \rangle$. This problem is known as minor component analysis, and the smallest eigenvalues are called minor components. Each $y_j$ can be minimised by finding the corresponding minor component. Eigenvalues can be found by performing eigendecomposition using any of the methods known from linear algebra. 
+This means that the constraints on $y$ will be fulfilled if we can guarantee that $\boldsymbol{W}$ is orthonormal.  For the first $y_1$, the decorrelation constraint is vacuously true, thus problem reduces to finding the normed  vector $\boldsymbol{w}_j$ that minimises $\langle y_1 \rangle$. The solution is obtained by finding the smallest eigenvector of covariance matrix $\langle \dot{z} \dot{z}^T \rangle$. This problem is known as minor component analysis (MCA), and the smallest eigenvalues are called minor components. Each $y_j$ can be minimised by finding the corresponding minor component. Eigenvalues can be found by performing eigendecomposition using any of the methods known from linear algebra. 
 
-In practice, is it more efficient to use an iterative approach, such as \textit{candid covariance-free incremental principal component analysis}, which also allows for continual learning in a dynamically changing environment. Such algorithm has been termed \textit{incSFA}. Analogically to deep networks, SFA can be used in a multi-layer hierarchical architecture with convolutional connectivity patterns (fig. \ref{fig:inc_sfa_hierarchy}).
+In practice, is it more efficient to use an iterative approach, such as \textit{candid covariance-free incremental principal component analysis} and incremental MCA. It also allows for continual learning in a dynamically changing environment. Such approach has been termed \textit{incSFA}. Analogically to deep networks, SFA can produce more complex results when arranged in a multi-layer hierarchical architecture with convolutional connectivity patterns (fig. \ref{fig:inc_sfa_hierarchy}).
 \begin{figure}[!htbp]
 	\centering
-	\includegraphics[width=12cm]{inc_sfa_hierarchy}
-	\caption{Hierarchical incremental slow-feature-analysis.}
+	\includegraphics[width=10cm]{inc_sfa_hierarchy}
+	\caption{Hierarchical incremental slow-feature-analysis. The connections are localised, analogically to the topology found in convolutional neural networks.}
 	\label{fig:inc_sfa_hierarchy}
 \end{figure}
 
- 
+It has been found that the complex cells of primary visual cortex can emerge in the initial layers of SFA (Koerding et al., 2004, Berkes and Wiskott, 2005). 
+By combining slowness principle with sparseness of neural activations, place, grid, head-direction and spacial-view cells can also arise (fig. \ref{fig:sfa_place_cells}) (Franzius, Sprekeler, Wiskott 2007).
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=7cm]{ sfa_place_cells}
+	\caption{Simulated hippocampal neurons.}
+	\label{fig:sfa_place_cells}
+\end{figure}
 
 \subsubsection{Tollman-Eichenbaum Machine}
 
+Deep networks trained with backpropagation are capable of producing place cells. To achieve this, a special architecture of \textit{Tollman-Eichenbaum machine} (TEM) is required. 
+
+The agent navigates some environment $S$. Each state $s\in S$ produces some signal $x = \xi(s) \in \mathcal{X}$. The agent can only observe $x$ and has no access to $s$. The task is to learn graph structure of $S$. Based on the sequence of actions and observations 
+\[
+x_1, a_1, x_2, a_2, ... , x_{t-1}, a_{t-1}
+\]
+agent must predict the next signal $x_{t}$. During training the agent will experience many trajectories, all of them sharing the same underlying graph $S$, but with a different state-signal mapping $\xi$. This means that some form of episodic memory is required. Predicting $x_{t}$ is only possible if agent knows $S$ and remembers what $\xi(s)$ it has previously seen within the current episode (trajectory). 
+
+TEM solves this learning problem by introducing  $\boldsymbol{g}$, which is an approximation of the unknown $s$. At each time step $t$, we use some fully-connected layers to model $p(\boldsymbol{g}_{t}|\boldsymbol{g}_{t-1},a_t)$, similarly as it is done in recurrent neural networks. Once a new $\boldsymbol{g}_{t}$ is estimated, it is used as a ``query key'' to an attractor-network $M_{t-1}$, which returns a grounded variable $\boldsymbol{p}_{t}$. Attractor networks work by iteratively applying some transformation to their input, until an attractor state (fixed-point) is reached. One example of this are Hopfield networks. In the case of TEM, the attractor network is implemented by a matrix $M$, and fixed-point is reached by applying
+\[
+\boldsymbol{h}_{\tau+1} = f_p(\kappa \boldsymbol{h}_{\tau}+\boldsymbol{M}_t \boldsymbol{h}_{\tau})
+\]
+to some initial input $\boldsymbol{h}_0$ (in this case, $\boldsymbol{h}_0=\boldsymbol{g}_{t}$, and in the limit $\boldsymbol{h}_{\infty}=\boldsymbol{p}_{t}$ is reached) where $f_p$ is some activation function and $\kappa$ is some constant. Having obtained $\boldsymbol{p}_{t}$,  feed-forward layers can be used to model $p(x_{t}| \boldsymbol{p}_{t})$. Thus the agent can ``imagine'' the next signal. All of the above mechanisms allow us to implement the generative model
+\[
+p(x_{\le T},\boldsymbol{p}_{\le T}, \boldsymbol{g}_{\le T}) = \prod_{t=1}^T p(x_{t}|\boldsymbol{p}_{t}) p(\boldsymbol{p}_{t}|\boldsymbol{M}_{t-1},\boldsymbol{g}_{t})p(\boldsymbol{g}_{t}|\boldsymbol{g}_{t-1},a_t)
+\]
+
+In order to train the network with backpropagation, a loss function and error is necessary. This can be obtained by coupling the generative model with a discriminative one, which has access to signal $x_{t}$ and uses it to build object representation $\boldsymbol{p}_{t}$ and guess location $\boldsymbol{g}_{t}$. Then we can compare $\boldsymbol{p}_{t}$ produced by both models and use loss function that penalises squared distance between two the vector representations. The same can be done for $\boldsymbol{g}_{t}$. Discriminative model is implemented as
+\[
+p(\boldsymbol{g}_{\le T},\boldsymbol{p}_{\le T}|x_{\le T}) = \prod_{t=1}^T
+p(\boldsymbol{p}_t|x_{\le t}, \boldsymbol{g}_{t})
+p(\boldsymbol{g}_t|x_{\le t},\boldsymbol{M}_{t-1},\boldsymbol{g}_{t-1},a_t) 
+\]
+Input signal is first preprocessed by appropriate layers and the resulting vector $x_{t}$ is passed as ``query'' into the attractor network $\boldsymbol{M}_{t}$, retrieving some memory $\boldsymbol{p}^{x}_{t}$. Further, recurrent layers are used to model
+$p(\boldsymbol{g}_t|\boldsymbol{p}^{x}_{t},\boldsymbol{g}_{t-1},a_t)$ and $p(\boldsymbol{p}_t|\boldsymbol{g}_t,x_t)$. Lastly, the newly produced grounded variable $\boldsymbol{p}_t$ is used to update memory $\boldsymbol{M}_{t-1}$ with the hebbian-learning rule
+\[
+\boldsymbol{M}_{t} = \lambda \boldsymbol{M}_{t-1} + \eta (\boldsymbol{p}_t - \hat{\boldsymbol{p}_t})(\boldsymbol{p}_t + \hat{\boldsymbol{p}_t})^T
+\]
+where $\lambda$, $\eta$ are some constants and $\hat{\boldsymbol{p}}$ is some vector representing current place (could be $\boldsymbol{p}^{x}_{t}$ or the other $\boldsymbol{p}_t$ produced by generative model). The final schematic of TEM is presented on figure \ref{fig:tolman_eich}.
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=12cm]{tolman_eich}
+	\caption{An example of a simple grid-like environment $S$ with different objects (signals $x$) placed in specific locations (states $s$).}
+	\label{fig:tolman_eich}
+\end{figure} 
+
+The associative memory network $\boldsymbol{M}$ is not trained with backpropagation. It is updated using only hebbian learning rules. Nonetheless, backpropagation-through-time can be applied to the model as a whole, because  retrieving memories from $\boldsymbol{M}$ is a differentiable operation and the matrix $\boldsymbol{M}$ can be treated as a constant. Changes made to $\boldsymbol{M}$ are something that backpropagation can learn to use to its advantage. 
+
+Such use of hebbian-learning makes TEM a unique architecture, which may seem to go beyond the scope of geometric deep learning theory. A recent result (RELATING TRANSFORMERS TO MODELS AND NEURAL
+REPRESENTATIONS OF THE HIPPOCAMPAL FORMATION) shows that upon closer examination, Hopfield network $M$ is mathematically equivalent to self-attention and that TEM could be regarded as a transformer. 
+
+Tolman-Eichenbaum machine is a general architecture that can be applied to learn any graph $S$. In the special case of $S$ being a grid (discretised 2-dimensional plane) the activation patterns of $\boldsymbol{g}$ start to resemble grid cells, whereas $\boldsymbol{p}$ functions like place cells (fig \ref{fig:tolman_eich_results}).
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=7cm]{tolman_eich_results}
+	\caption{Place cells and grid cells emerging in $\boldsymbol{p}$ and $\boldsymbol{g}$ layers of TEM.}
+	\label{fig:tolman_eich_results}
+\end{figure} 
 
 \section{Geometry of reinforcement learning}
 
@@ -588,7 +664,9 @@ A Cayley graph could be expressed in differentiable form as a deep network, whic
 
 
 
-The real brain does not seem to be working in such a way. It requires very little energy and can respond to stimulus within a few miliseconds. Instead of modelling a function $S\times A \rightarrow S$, we could imitate the brain by modelling states of $S$ as individual neurons. Suppose that for every $s\in S$ there exists one corresponding neuron $n_s$ in the network structure. If the agent transitions from $s$ to $s'$, we could strengthen the connection weight $w_{ss'}$ between $n_s$ and $n_{s'}$. This mechanism is local, which means that it will not interfere and overwrite other memories. It would also not require backpropagation. Hebbian learning rules would be enough. If building a relation between two events is only a matter of connecting the corresponding neurons together, then one-shot learning is easy to achieve. During graph search, we could follow the connections between consecutive states, without the need for activating any intermediate neurons. It is possible to make the graph search highly efficient by initiating activation of some neuron $n_{s}$ that corresponds to current state $s$, and then $n_s$ could simultaneously cause firing of several possible $n_{s'}$ neurons corresponding to different future path candidates. We could use a (parallelised) random walk  as a simple search mechanism. If $S$ is decomposed into multiple quotient groups, then planning could simultaneously occur on different granularity scales. If the strength of connections is proportional to the expected reward, then random walk would be skewed towards ``better'' paths. A mechanism similar to sharp-wave ripple could be used to learn such skewed connection strengths, by replaying recent trajectories $s_0,s_1,s_2,...s_t$, rectivating consecutive neurons $n_{s_0},n_{s_1},...,n_{s_t}$ and incrementing their connections $w_{s_0s_1},...,w_{s_{t-1}s_t}$ by some learning rate proportional to reward.  We could potentially build episodic memory by assuming temporal consistency, that is if $n_{s'}$ fires after $n_{s}$ then $s'$ occurs after $s$, and therefore entire chains of memories could be built. The only problem is that the number of states $S$ might be large, even if we decompose $S$ into a hierarchy of quotient groups. Within such large networks, only a few neurons would have to be active at the same time. Therefore the ideal data structure would be a large and sparsely active network. 
+The real brain does not seem to be working in such a way. It requires very little energy and can respond to stimulus within a few miliseconds. Instead of modelling a function $S\times A \rightarrow S$, we could imitate the brain by modelling states of $S$ as individual neurons. Suppose that for every $s\in S$ there exists one corresponding neuron $n_s$ in the network structure. If the agent transitions from $s$ to $s'$, we could strengthen the connection weight $w_{ss'}$ between $n_s$ and $n_{s'}$. This mechanism is local, which means that it will not interfere and overwrite other memories. It would also not require backpropagation. Hebbian learning rules would be enough. If building a relation between two events is only a matter of connecting the corresponding neurons together, then one-shot learning is easy to achieve. During graph search, we could follow the connections between consecutive states, without the need for activating any intermediate neurons. It is possible to make the graph search highly efficient by initiating activation of some neuron $n_{s}$ that corresponds to current state $s$, and then $n_s$ could simultaneously cause firing of several possible $n_{s'}$ neurons corresponding to different future path candidates. We could use a (parallelised) random walk  as a simple search mechanism. If $S$ is decomposed into multiple quotient groups, then planning could simultaneously occur on different granularity scales. If the strength of connections is proportional to the expected reward, then random walk would be skewed towards ``better'' paths. A mechanism similar to sharp-wave ripple could be used to learn such skewed connection strengths, by replaying recent trajectories $s_0,s_1,s_2,...s_t$, rectivating consecutive neurons $n_{s_0},n_{s_1},...,n_{s_t}$ and incrementing their connections $w_{s_0s_1},...,w_{s_{t-1}s_t}$ by some learning rate proportional to reward.  We could potentially build episodic memory by assuming temporal consistency, that is if $n_{s'}$ fires after $n_{s}$ then $s'$ occurs after $s$, and therefore entire chains of memories could be built. The only problem is that the number of states $S$ might be large, even if we decompose $S$ into a hierarchy of quotient groups. Within such large networks, only a few neurons would have to be active at the same time. Therefore the ideal data structure would be a large and sparsely active network.  
+
+The mechanism of planning by performing parallel random walks over cognitive maps is very simple. If it was indeed true that hippocampus worked in this way, then another hypothesis would immediately come to mind. Perhaps higher cognitive functions and human-like intelligence could reuse the same mechanism but at a larger scale. 
 
 \section{Sparse binary winner-takes-all networks}
 
