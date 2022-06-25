@@ -50,7 +50,7 @@
 Modern deep neural networks have achieved a multitude of impressive feats, yet at the same time their intelligence appears to be shallow and inflexible. Perhaps the most challenging is the frontier of reinforcement learning (RL).  As it has been demonstrated in Deepmind's ablation studies \cite{rainbow_dqn}, deep RL requires absurd amounts of training data and computation power (figure \ref{fig:dqn}). This issue is often referred to as sample inefficiency.
 \begin{figure}[!htbp]
 	\centering
-	\includegraphics[width=13cm]{dqn}
+	\includegraphics[width=7cm]{dqn}
 	\caption{Median human-normalized performance across
 		57 Atari games for various deep RL methods.}
 	\label{fig:dqn}
@@ -58,7 +58,7 @@ Modern deep neural networks have achieved a multitude of impressive feats, yet a
 The produced results rarely generalise to novel tasks and often fail to adapt to slight variations of the same task \cite{generalisation_in_rl}. Transfer learning does not exist in deep RL and fine-tuning an agent on a novel task leads to \textit{catastrophic forgetting} of the previous one. Moreover, even within the same environment, reproducibility suffers and learning algorithms may fail due to random fluctuations \cite{vime}, as it can be seen on figure \ref{fig:vime}. 
 \begin{figure}[!htbp]
 	\centering
-	\includegraphics[width=13cm]{vime}
+	\includegraphics[width=7cm]{vime}
 	\caption{The dark line is the median performance over 10 random seeds. The shaded region is the 25th to 75th percentile. It means that 25\% of runs fail due to randomness.}
 	\label{fig:vime}
 \end{figure} 
@@ -70,7 +70,7 @@ In order to understand how nature tackles the problems of reinforcement learning
 
 \subsubsection{Hodgkin-Huxley model}
 
-Like many natural phenomena, biological brains can be modelled on several levels of complexity. The smallest possible scale is microscopic - the biophysics of individual neurons. The evolution of action potential across cell membrane is well understood and can be modelled mathematically with high accuracy. In 1952, Hodgkin and Huxley \cite{hodgkin} were the first to successfully described membrane potentials using differential equations. Their model was able to perfectly fit the observed experimental data (figure \ref{fig:hodgkin_huxley_experiments}). The Hodgkin-Huxley model will serve as the basis for deriving more complex spiking neural networks - a very promising venue for finding future potential alternatives to deep nets.
+Like many natural phenomena, biological brains can be modelled at several levels of complexity. The smallest possible scale is microscopic - the biophysics of individual neurons. The evolution of action potential across cell membrane is well understood and can be modelled mathematically with high accuracy. In 1952, Hodgkin and Huxley \cite{hodgkin} were the first to successfully described membrane potentials using differential equations. Their model was able to perfectly fit the observed experimental data (figure \ref{fig:hodgkin_huxley_experiments}). The Hodgkin-Huxley model will serve as the basis for deriving more complex spiking neural networks - a very promising venue for finding potential future alternatives to deep nets.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=13cm]{hodgkin_huxley_experiments}
@@ -123,7 +123,7 @@ There exist many variations of the Hodgkin-Huxley model that account for more in
 
 For our purpose of building artificial intelligence, the biological realism is of secondary importance. We are interested in abstracting away as much biophysics as possible, while still retaining the computational and algorithmic properties of neurons. One of such useful abstractions is the integrate-and-fire model.
 
-It has been observed that the potential propagated through the membrane after stimulation is very noisy (fig. \ref{fig:membrane_potential_spike}), due to inherent randomness in closing and opening of ions channels. 
+It has been observed that the potential propagated through the membrane after stimulation is very noisy \cite{neuronal_dynamics} (fig. \ref{fig:membrane_potential_spike}), due to inherent randomness in closing and opening of ions channels. 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=5cm]{membrane_potential_spike}
@@ -212,7 +212,7 @@ When $r$ is high, the neuron will be more likely to fire first and inhibit other
 \subsection{Geometric deep learning theory}
 
 Neuroscientific models can tell us a lot about the functioning of biological neurons, but their practical applications have been limited. As of today, deep learning remains the only tool capable of producing end results that resemble complex intelligent behaviour.
-The success of deep networks can be largely attributed to their ability of expressing algebraic symmetries in the data. This notion is studied and formalized by geometric deep learning theory.
+The success of deep networks can be largely attributed to their ability of expressing algebraic symmetries in the data. This notion is studied and formalized by geometric deep learning theory \cite{geom_deep_learn}.
 
 \subsubsection{Curse of dimensionality}
 
@@ -231,7 +231,7 @@ Suppose $f: \mathbb{R}^d\rightarrow\mathbb{R}$ is 1-Lipschitz continuous, i.e. s
 	\caption{Illustration of $f(x)=\sum_{j=1}^{2^d} z_j \phi(x-x_j)$ in higher dimensions $d$.}
 	\label{fig:curse_of_dim}
 \end{figure}
-In order to identify $f$ we have to observe each one of the ``bumps''. Therefore, $N$ must grow exponentially $2^d$ with dimensionality $d$. This argument can be fully formalized using the notion of maximum discrepancy (von Luxburg and Bousquet, 2004).
+In order to identify $f$ we have to observe each one of the ``bumps''. Therefore, $N$ must grow exponentially $2^d$ with dimensionality $d$. This argument can be fully formalized using the notion of maximum discrepancy \cite{lipschitz}.
 
 \subsubsection{Geometric priors}
 
@@ -276,7 +276,7 @@ Let us now consider  the problem of learning to interact with a dynamic environm
 
 \subsubsection{Markov decision processes}
 
-Reinforcement learning is based on the interplay between agent and environment. 
+Reinforcement learning \cite{rl_sutton} is based on the interplay between agent and environment. 
 It is mathematically formalized as a \textit{Markov decision process} (MDP).
 At time-step $t$ the agent is in some state $S_t$ of the environment. The agent can take an action $A_t$, which results in transition to a new state  $S_{t+1}$ (fig. \ref{fig:agent_env_interaction}). 
 \begin{figure}[!htbp]
@@ -366,7 +366,7 @@ The theory of Markov decision processes gives us an elegant and abstract mathema
 
 \subsubsection{Tolman's experiments on rats}
 
-In 1948, Edward Tolman published a collection of experiments investigating decision-making and planning in rats. One of them was the T-Alley Maze (fig. \ref{fig:tolman_maze}).
+In 1948, Edward Tolman published a collection of experiments investigating decision-making and planning in rats \cite{cog_maps_tolman}. One of them was the T-Alley Maze (fig. \ref{fig:tolman_maze}).
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=9cm]{tolman_maze}
@@ -391,39 +391,39 @@ I would like to point out a striking resemblance between stimulus-response theor
 \subsubsection{Grid cells, place cells and the hippocampus}
 Since the formulation of the cognitive map hypothesis, neuroscience has provided us with a plethora of evidence in its favour.
 
-In 1971, John O'Keefe and Jonathan Dostrovsky performed one of the first experiments demonstrating the significance of hippocampus in spacial navigation. By placing electrodes in a rat's brain and measuring activity of neurons, they noticed that some of them would only fire whenever the  rat was in a specific place of the testing platform. These neurons were later termed as \textit{place cells}.
+In 1971, John O'Keefe and Jonathan Dostrovsky performed one of the first experiments demonstrating the significance of hippocampus in spacial navigation \cite{OKEEFE1971171}. By placing electrodes in a rat's brain and measuring activity of neurons, they noticed that some of them would only fire whenever the  rat was in a specific place of the testing platform. These neurons were later termed as \textit{place cells}.
 
-In 2005, Edvard Moser and May-Britt Moser, discovered neurons in medial entorhinal cortex that would respond whenever a rat was in one of several places. When plotted in two dimensions, those places would be arranged in a hexagonal grid-like pattern. Such neurons have been termed as \textit{grid cells}. In 2014 both of those discoveries won a Nobel Prize in Physiology and Medicine. 
+In 2005, Edvard Moser and May-Britt Moser, discovered neurons in medial entorhinal cortex that would respond whenever a rat was in one of several places \cite{Hafting2005}. When plotted in two dimensions, those places would be arranged in a hexagonal grid-like pattern. Such neurons have been termed as \textit{grid cells}. In 2014 both of those discoveries won a Nobel Prize in Physiology and Medicine. 
 
-Another similar type of neurons are the \textit{head-direction cells}, which can be found in many brain areas. Their response becomes strongest whenever the animal's head is facing a specific direction. Grid, place and head-direction cells have been observed in many species, but the brains of primates have several unique features and neurons not found anywhere else. One of them are spacial-view cells, which activate whenever a primate is looking at a specific place. All these types of cells are summarized on figure  \ref{fig:place_grid_head_view_cells}.
+Another similar type of neurons are the \textit{head-direction cells} \cite{HD_cells}, which can be found in many brain areas. Their response becomes strongest whenever the animal's head is facing a specific direction. Grid, place and head-direction cells have been observed in many species, but the brains of primates have several unique features and neurons not found anywhere else. One of them are spacial-view cells, which activate whenever a primate is looking at a specific place. All these types of cells are summarized on figure  \ref{fig:place_grid_head_view_cells}.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=12cm]{place_grid_head_view_cells}
-	\caption{A schematic representing activations of different cell types. The location and direction of an arrow corresponds to the place and direction of a rat's head. Arrow length depicts the firing rate of a neuron.}
+	\caption{A schematic representing activations of different cell types. The location and direction of an arrow corresponds to the place and direction of a rat's head. Arrow length depicts the firing rate of a neuron. Figure from  Franzius, Sprekeler, Wiskott \cite{slowness_sparseness}.}
 	\label{fig:place_grid_head_view_cells}
 \end{figure}
 
-Entorhinal cortex hosts boundary-vector cells, which fire whenever the animal finds itself in specific distance and orientation to some environmental boundary, such as walls, holes or impenetrable objects.  There are also many other types of object-vector cells, which fire in response to any object being located in a specific place relative to the agent \cite{vector_trace_cells}.
+Entorhinal cortex hosts boundary-vector cells \cite{BVC}, which fire whenever the animal finds itself in specific distance and orientation to some environmental boundary, such as walls, holes or impenetrable objects.  There are also many other types of object-vector cells, which fire in response to any object being located in a specific place relative to the agent \cite{vector_trace_cells}.
 
-The activation patterns of grid cells are not always regular. The shape of the environment often has a significant influence on them. Krupic et al. has performed many experiments investigating this phenomenon (fig \ref{fig:kurpic}). The boundary-vector cells may also have an influence on grid and place cells \cite{boundary_vector_cells}.
+The activation patterns of grid cells are not always regular. The shape of the environment often has a significant influence on them. Krupic et al. \cite{Kurpic} has performed many experiments investigating this phenomenon (fig \ref{fig:kurpic}). The boundary-vector cells may also have an influence on grid and place cells \cite{boundary_vector_cells}.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=12cm]{kurpic}
-	\caption{Histograms showing the effect of compartment shape on the grid cell firing fields. Experiment by Krupic et al. (2015).}
+	\caption{Histograms showing the effect of compartment shape on the grid cell firing fields.}
 	\label{fig:kurpic}
 \end{figure}
 Certain species of mammals, such as bats, can fly and their place and grid cells fire in three-dimensional patterns. An interesting finding was that even grounded animals, such as rats,
 can exhibit three-dimensional activation patterns if placed in environments that allow climbing in all directions \cite{grid_cells_3d}. This suggests that mechanisms behind these neurons are general, flexible and adaptable to many situations.
 It has been found that rat hippocampus contains cells that do not only code for location, but can represent sound frequencies (if trained that turning a lever to produce a specific pitch results in reward), counting (number of laps when moving in a circular track), logical dependencies between cues and rewards (moving left or right in a T-maze depending on what happens before), or potentially any abstract knowledge about the environment \cite{hippocampus_abstract_geometry}. 
 
-Place cells do not only code for current location, but they can also fire in sequences that predict future paths that the rat will take \cite{place_cell_sequences}. For this reason, the hippocampus is thought to play an essential role in planning. This led to formulation of predictive map hypothesis, which states that the place cells do not code for current location, but rather predict the next state of the animal \cite{predictive_map}. After a rat traces some path and the corresponding place cells fire at each intermediate location, the same sequence of  neurons is then replayed again but in reverse order. This mechanism is called \textit{sharp-wave-ripple} and is thought to be important for formation of episodic memory \cite{shard_wave_ripple}\cite{alternating_sequences}. It is believed that planning into the future and remembering the past might reuse the same underlying mechanisms \cite{past_and_future}.  The generality of abstract knowledge represented in hippocampus is a sign that the mechanism responsible for emergence of place cells could be also used to explain higher cognitive functions in other parts of the brain.
+Place cells do not only code for current location, but they can also fire in sequences that predict future paths that the rat will take \cite{place_cell_sequences}. For this reason, the hippocampus is thought to play an essential role in planning. This led to formulation of predictive map hypothesis, which states that the place cells do not code for current location, but rather predict the next state of the animal \cite{predictive_map}. After a rat traces some path and the corresponding place cells fire at each intermediate location, the same sequence of  neurons is then replayed again but in reverse order. This mechanism is called \textit{sharp-wave-ripple} and is thought to be important for formation of episodic memory \cite{shard_wave_ripple,alternating_sequences}. It is believed that planning into the future and remembering the past might reuse the same underlying mechanisms \cite{past_and_future}.  The generality of abstract knowledge represented in hippocampus is a sign that the mechanism responsible for emergence of place cells could be also used to explain higher cognitive functions in other parts of the brain.
 
 From a neuroscientific perspective, the cognitive map theory looks appealing and credible. In the field of computer science we do not yet have any successful artificial agents, whose intelligence would be based on mechanisms resembling cognitive maps. We do, nonetheless, have some promising algorithms and proofs of the concept. 
 
 
 \subsubsection{Successor representation spectrum}
 How do place and grid cells arise? Are they inborn and ``pre-wired'' by years of evolution, or is there a simple and elegant algorithm that leads to their emergence? 
-As Kimberly Stachenfeld has showed, grid-like patterns can emerge when employing spectral graph theory to analyse reinforcement learning agents. 
+As Kimberly Stachenfeld has showed \cite{hipp_as_cog_map}, grid-like patterns can emerge when employing spectral graph theory to analyse reinforcement learning agents. 
 
 The standard definition of dynamics function $p(s',r|s,a)$ can be equivalently specified as separate transition function $p(s'|s,a)$ and state-reward function $p(r|s)$.
 While $p(s',r|s,a)$ allows us to condition $r$ on both $s$ and $a$,  here we assume that reward $p(r|s)$ depends only on state. For those familiar with automata theory, the distinction is analogical to that between Mealy and Moore machines (converting $p(s',r|s,a)$ to $p(s'|s,a)$ and $p(r|s)$, is the same as reducing Mealy automaton to Moore). The value $v$ of a state $s$ can now be simplified to
@@ -462,7 +462,7 @@ Successor representation is efficient and allows us to use many tools of spectra
 
 \subsubsection{Slow feature analysis}
 
-Another candidate algorithm for explaining emergence of cognitive maps, is the \textit{slow feature analysis} (SFA). It is capable of generating grid cells, place cells, head-direction cells, simple and complex cells of V1, and so on. To the best of my knowledge, it is the only algorithm capable of generating such a wide range of receptive fields, using nothing more than visual stimulus (agent has no direct knowledge of state $s$). 
+Another candidate algorithm for explaining emergence of cognitive maps, is the \textit{slow feature analysis} \cite{slow_feature_analysis} (SFA). It is capable of generating grid cells, place cells, head-direction cells, simple and complex cells of V1, and so on \cite{slowness_sparseness}. To the best of my knowledge, it is the only algorithm capable of generating such a wide range of receptive fields, using nothing more than visual stimulus (agent has no direct knowledge of state $s$). 
 
 \textit{Slowness principle} states that the sensory stimulus should be consistent in time and change continuously. Objects do not appear and disappear suddenly, but rather come into and out of agent's view gradually. Similar stimulus signals, that are received closely in time, are likely to come from the same object. This reasoning can be captured more formally. 
 
@@ -505,8 +505,8 @@ In practice, is it more efficient to use an iterative approach, such as \textit{
 	\label{fig:inc_sfa_hierarchy}
 \end{figure}
 
-It has been found that the complex cells of primary visual cortex can emerge in the initial layers of SFA (Koerding et al., 2004, Berkes and Wiskott, 2005). 
-By combining slowness principle with sparseness of neural activations, place, grid, head-direction and spacial-view cells can also arise (fig. \ref{fig:sfa_place_cells}) (Franzius, Sprekeler, Wiskott 2007).
+It has been found SFA leads to emerge of receptive fields similar to complex cells of primary visual cortex \cite{sfa_complex_cells}. 
+By combining slowness principle with sparseness of neural activations, place, grid, head-direction and spacial-view cells can also arise \cite{slowness_sparseness} (fig. \ref{fig:sfa_place_cells}).
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=7cm]{ sfa_place_cells}
@@ -516,7 +516,7 @@ By combining slowness principle with sparseness of neural activations, place, gr
 
 \subsubsection{Tollman-Eichenbaum Machine}
 
-Deep networks trained with backpropagation are capable of producing place cells. To achieve this, a special architecture of \textit{Tollman-Eichenbaum machine} (TEM) is required. 
+Deep networks trained with backpropagation are capable of producing place cells. To achieve this, a special architecture of \textit{Tollman-Eichenbaum machine} (TEM) \cite{TEM} is required. 
 
 The agent navigates some environment $S$. Each state $s\in S$ produces some signal $x = \xi(s) \in \mathcal{X}$. The agent can only observe $x$ and has no access to $s$. The task is to learn graph structure of $S$. Based on the sequence of actions and observations 
 \[
@@ -554,8 +554,7 @@ where $\lambda$, $\eta$ are some constants and $\hat{\boldsymbol{p}}$ is some ve
 
 The associative memory network $\boldsymbol{M}$ is not trained with backpropagation. It is updated using only hebbian learning rules. Nonetheless, backpropagation-through-time can be applied to the model as a whole, because  retrieving memories from $\boldsymbol{M}$ is a differentiable operation and the matrix $\boldsymbol{M}$ can be treated as a constant. Changes made to $\boldsymbol{M}$ are something that backpropagation can learn to use to its advantage. 
 
-Such use of hebbian learning makes TEM a unique architecture, which may seem to go beyond the scope of geometric deep learning theory. A recent result (RELATING TRANSFORMERS TO MODELS AND NEURAL
-REPRESENTATIONS OF THE HIPPOCAMPAL FORMATION) shows that upon closer examination, Hopfield network $M$ is mathematically equivalent to self-attention and that TEM could be regarded as a transformer. 
+Such use of hebbian learning makes TEM a unique architecture, which may seem to go beyond the scope of geometric deep learning theory. A recent result \cite{TEM_as_teransformer} shows that upon closer examination, Hopfield network $M$ is mathematically equivalent to self-attention and that TEM could be regarded as a transformer. 
 
 Tolman-Eichenbaum machine is a general architecture that can be applied to learn any graph $S$. In the special case of $S$ being a grid (discretized 2-dimensional plane) the activation patterns of $\boldsymbol{g}$ start to resemble grid cells, whereas $\boldsymbol{p}$ functions like place cells (fig \ref{fig:tolman_eich_results}).
 \begin{figure}[!htbp]
@@ -680,7 +679,7 @@ The algorithm, described in the rest of this thesis, is my attempt at finding su
 
 \subsection{Bayesian and variational inference}
 
-The foundation of all machine learning algorithms is the problem of estimating parameters $\theta$ for some unknown statistical model $p(x;\theta)$, based on a set of observations $x$ generated by $p(x;\theta)$.  Bayesian inference is a process in which evidence $p(\theta)$ and observations $x$ are used to estimate posterior probability $p(x|\theta)$ where $\theta$ is treated like a random variable.
+The foundation of all machine learning algorithms is the problem of estimating parameters $\theta$ for some unknown statistical model $p(x;\theta)$, based on a set of observations $x$ generated by $p(x;\theta)$.  Bayesian inference \cite{var_inf} is a process in which evidence $p(\theta)$ and observations $x$ are used to estimate posterior probability $p(x|\theta)$ where $\theta$ is treated like a random variable.
 If we are only interested in finding $\theta$ that maximizes $p(x|\theta)$,  we can use \textit{maximum likelihood} (ML) estimation
 \[
 \hat{\theta}_{ML} = \argmax_\theta p(x;\theta)
@@ -698,7 +697,7 @@ The main difficulty in applying Bayesian inference is that the integral over $y$
 \hat{\theta}_{MAP} = \argmax_\theta p(\theta|x) = \argmax_\theta \frac{p(x|\theta)p(\theta)}{\int p(x|\theta)p(\theta) d\theta} = \argmax_\theta p(x|\theta)p(\theta)
 \]
 because the denominator becomes a constant and no longer depends on $\theta$.
-MAP can be combined with \textit{expectation maximization} (EM) algorithm by taking logarithm and introducing some distribution function $q(y)$
+MAP can be combined with \textit{expectation maximization} (EM) \cite{em_alg} algorithm by taking logarithm and introducing some distribution function $q(y)$
 \[
 \ln p(\theta | x) = F(q,\theta) + KL(q\Vert p) 
 \]
@@ -713,7 +712,7 @@ KL(q\Vert p) = -\int  q(y)\ln(\frac{p(y|x;\theta)}{q(y)}) dy
 It always holds that $KL(q\Vert p) > 0$, therefore $\ln p(\theta | x) > F(q,\theta)$,  meaning that free-energy is the lower bound of  log-likelihood. 
 In the E-step of EM algorithm, this lower  bound is maximized with respect to $q(y)$. In the M-step $q$ is held fixed and $F$ is maximized with respect to $\theta$.
 When repeated, such procedure causes $q(y)$ to converge to $p(y|x;\theta)$. 
-This forms the basis of variational inference \cite{var_inf}. It is the foundation for predictive coding \cite{pred_coding}, which has been shown to approximate backpropagation using biologically-plausible hebbian learning rules \cite{pred_coding_comp_graph}. Large networks of neurons can be modelled by using multiple hidden variables  $\boldsymbol{y}=[y_1,...,y_m]$
+This forms the basis of variational inference \cite{var_inf}. It is the foundation for predictive coding \cite{pred_coding, free_energy_principle_and_brain}, which has been shown to approximate backpropagation using biologically-plausible hebbian learning rules \cite{pred_coding_comp_graph}. Large networks of neurons can be modelled by using multiple hidden variables  $\boldsymbol{y}=[y_1,...,y_m]$
 \[
 \boldsymbol{q}(\boldsymbol{y}) = \prod_{j=1}^{m} q(y_j)
 \]
