@@ -1,4 +1,4 @@
-\title{Masters thesis}
+\title{Master's thesis}
 \author{Aleksander Mendoza}
 
 \documentclass[12pt]{article}
@@ -42,7 +42,7 @@
 
 
 \begin{abstract}
-	abstract here
+This thesis focuses on investigating the problems of sample inefficiency and catastrophic forgetting in reinforcement learning. It takes inspiration from neuroscience and mathematical foundations of deep learning and Markov decision processes. A new theoretical framework is proposed, which unifies all those fields and provides valuable fundamental insights to the many problems of deep reinforcement learning and beyond. Based on those arguments, a new model of neural networks is proposed, with the aim of learning sparse cognitive maps and formalising some of the computational mechanisms of biological neurons.   
 \end{abstract} 
 \tableofcontents
 \section{Preliminaries}
@@ -55,7 +55,7 @@ Modern deep neural networks have achieved a multitude of impressive feats, yet a
 		57 Atari games for various deep RL methods.}
 	\label{fig:dqn}
 \end{figure} 
-The produced results rarely generalise to novel tasks and often fail to adapt to slight variations of the same task \cite{generalisation_in_rl}. Transfer learning does not exist in deep RL and fine-tuning an agent on a novel task leads to \textit{catastrophic forgetting} of the previous one. Moreover, even within the same environment, reproducibility suffers and learning algorithms may fail due to random fluctuations \cite{vime}, as it can be seen on figure \ref{fig:vime}. 
+The produced results rarely generalize to novel tasks and often fail to adapt to slight variations of the same task \cite{generalisation_in_rl}. Transfer learning does not exist in deep RL and fine-tuning an agent on a novel task leads to \textit{catastrophic forgetting} of the previous one. Moreover, even within the same environment, reproducibility suffers and learning algorithms may fail due to random fluctuations \cite{vime}, as it can be seen on figure \ref{fig:vime}. 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=7cm]{vime}
