@@ -1028,17 +1028,6 @@ for $\boldsymbol{x}$ sampled from $p(\boldsymbol{x}|y_j)$:
     $Q_j$ = $Q_j + \epsilon \boldsymbol{x}$ 
     $Q_j$ = $Q_j$/$\lVert Q_j \rVert_1$
 \end{lstlisting}
-The full algorithm written in an online form would look as follows
-\begin{lstlisting}
-def ecc($\boldsymbol{x}$,$W$,$u$):
-    if $\lVert\boldsymbol{x}\rVert_u$ $\le$ threshold:
-        pass    // filter-out noise/empty input
-    $k$ = argmax($\boldsymbol{x}W$)
-    if learning_enabled:
-        $W_k$ = $W_k+\frac{\boldsymbol{x}}{\lVert\boldsymbol{x}\rVert_u}\epsilon$
-        $W_k$ = $W_k$ / $\lVert W_k \rVert_u$
-    return $k$
-\end{lstlisting}
 
 \paragraph{Higher-order networks}
 
@@ -1239,7 +1228,7 @@ This is a sign that only using k-means is not enough and another mechanism might
 \end{figure} 
 Another important factor in the real brains is the slowness principle. SFA attempts to find functions whose derivative $\langle \dot{y}^2 \rangle$ is minimized, thus ensuring the output varies slowly over time.
 In the case of binary vectors, the analogue of $\langle \dot{y}^2 \rangle$   becomes
-$(\boldsymbol{y}^{(t+1)}-\boldsymbol{y}^{(t)})^2$, which is equal to the number of differing bits. Minimizing this expression is equivalent to maximizing the number of bits overlapping between consecutive time-steps. ECC networks achieve this effect by randomly fixing hidden layers $\boldsymbol{y}$, preventing the activation patterns from changing in then next step $t+1$. Then the input signal $\boldsymbol{x}$ is acted upon with some action $a$. In the case of MNIST, it would be a small random translation. 
+$(\boldsymbol{y}^{(t+1)}-\boldsymbol{y}^{(t)})^2$, which is equal to the number of differing bits. Minimizing this expression is equivalent to maximizing the number of bits overlapping between consecutive time-steps. ECC networks achieve this effect by randomly fixing hidden layers $\boldsymbol{y}$, preventing the activation patterns from changing in then next step $t+1$ (as if the neurons were repeatedly bursting). Then the input signal $\boldsymbol{x}$ is acted upon with some action $a$. In the case of MNIST, it would be a small random translation. 
 As the values $\boldsymbol{y}$ are held fixed, hebbian learning will result in strengthening of connections not only between $\boldsymbol{x}^{(t)}$ and $\boldsymbol{y}^{(t)}$ but also $\boldsymbol{x}^{(t+1)}$ and $\boldsymbol{y}^{(t)}=\boldsymbol{y}^{(t+1)}$. This results in learning transformation-invariant representations (fig. \ref{fig:motor_drift}). 
 \begin{figure}[!htbp]
 	\centering
@@ -1262,7 +1251,26 @@ This approach of leveraging slowness principle has a significant  positive effec
  	\caption{Each layer with even number uses slowness principle and its activations are randomly fixed. The odd layers do not fix their activations. The kernel size is 6x6 for odd and 1x1 for even layers. An interesting observation is that slowness allows for significant reduction in number of channels.}
  \end{table}
 
+\iffalse
+\subsection{Implementation}
+
+The full algorithm written in an online form would look as follows
+\begin{lstlisting}
+	def ecc($\boldsymbol{x}$,$W$,$u$):
+	if $\lVert\boldsymbol{x}\rVert_u$ $\le$ threshold:
+	pass    // filter-out noise/empty input
+	$k$ = argmax($\boldsymbol{x}W$)
+	if learning_enabled:
+	$W_k$ = $W_k+\frac{\boldsymbol{x}}{\lVert\boldsymbol{x}\rVert_u}\epsilon$
+	$W_k$ = $W_k$ / $\lVert W_k \rVert_u$
+	return $k$
+\end{lstlisting}
+\fi
+
 ECC networks not only converge faster, but their sparsity also allows for significant performance increase. An implementation written in Rust was able to process 2000 MNIST  images  per second on a single thread on 2.7 GHz Intel i5 core. Each image was random patch of 25x25 pixels. The network had 734400 learnable parameters. When learning was enabled, it could train on 1700 images per second. 
+
+
+
 \bibliographystyle{BibTeXtran}   % (uses file "BibTeXtran.bst")
 \bibliography{BibTeXrefs}    
 
