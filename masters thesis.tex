@@ -1269,6 +1269,19 @@ The full algorithm written in an online form would look as follows
 
 ECC networks not only converge faster, but their sparsity also allows for significant performance increase. An implementation written in Rust was able to process 2000 MNIST  images  per second on a single thread on 2.7 GHz Intel i5 core. Each image was random patch of 25x25 pixels. The network had 734400 learnable parameters. When learning was enabled, it could train on 1700 images per second. 
 
+\section{Sparse decorrelation networks}
+
+In the previous section we modeled inhibitory neurons as classes of mutually exclusive excitatory units. Their computational role was to implement winner-takes-all mechanism.
+It is a coarse and high-level abstraction. In the following section we will try to model the inhibition in an even finer and more detailed manner. 
+It will us to address two key problems of ECC networks. 
+\begin{enumerate}
+	\item Certain $\boldsymbol{x}$ patterns occur with disproportionately higher probabilities than others. During training it is very likely for a few $y$ neurons to bind strongly to those few patterns. As a result $p(y)$ for those few $y$ neurons is very high, leaving little room for any other $y$ to activate. In order to address this problem and prevent any neuron from dominating others, we used  \textit{entropy maximization} as a regularization method. This would be achieved by lowering $a_j$ for $y_j$ every time $y_j$ wins and slightly increasing $a_{\ne j}$ for all other losing $y_{\ne j}$. When repeated iteratively over time, this procedure would cause all $p(y_j)$ to be approximately equal (hence entropy of $\boldsymbol{y}$ would be maximized). The downside is that training would take significantly longer as values of $\boldsymbol{a}$ require many iterations to stabilize and become equal. If certain patterns $\boldsymbol{x}$ occur too rarely, they will be incorporated into the receptive field $p(\boldsymbol{x}|y_j)$ of the closest ``large enough'' cluster, thus defeating the purpose of out-of-distribution learning (if you see lions much less frequently than cats, the network will put them in the same cluster to balance probabilities, thus making it impossible to tell cats and lions apart). 
+	\item It is assumed that every excitatory neuron $y$ has exactly one corresponding inhibitory neuron $e$. What would happen if some $y_1$ was connected to two $e_1$ and $e_2$ at the same time?
+	According to the definition all $y$ neurons connected to the same $e$ are mutually exclusive. Therefore $y_1$ would be doubly inhibited and it would activate if and only if no other neuron connected to either $e_1$ or $e_2$ was active. As a result $p(y_1)$ would be significantly lower and entropy maximization would become impossible. 
+\end{enumerate}
+These are significant theoretical and practical limitations of ECC networks. My next model not only addresses both of these problems but is also more biologically accurate.
+
+
 
 
 \bibliographystyle{BibTeXtran}   % (uses file "BibTeXtran.bst")
