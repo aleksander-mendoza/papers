@@ -673,9 +673,8 @@ Rate-coded models of neurons (deep nets, slow feature analysis, predictive codin
 
 Sparse binary neuronal assemblies are an attempt to balance the realism and mathematical interpretability of neural models. It is also an important research venue, as we currently lack good learning algorithms for networks with sparse and binary activations. Such data structures would be an ideal candidate for modelling Cayley graphs. 
 
-A departure from continuous values and differential equations could potentially contribute to better understanding of more traditional realistic models from neuroscience. I like to illustrate the premise behind such approach by a simple analogy to digital computers. If we tried to reverse-engineer a CPU in the same way as we study biological neurons, we might try measuring the voltage levels in individual circuits and transistors. An experimented might notice that the voltage evolves continuously in time and can be described by systems of differential equations, but what makes the CPU a ``computer'' is not the physics of electric currents, but rather the discrete zeroes and ones that they represent. The true understanding of biological neurons will not be achieved until we can discretize and formally prove the algorithms that they implement. 
+My model is an attempt at finding a simple, discrete and mathematically rigorous interpretation of the biological learning processes.
 
-The algorithm, described in the rest of this thesis, is my attempt at finding such a proof.
 
 \subsection{Bayesian and variational inference}
 
@@ -1267,20 +1266,61 @@ The full algorithm written in an online form would look as follows
 \end{lstlisting}
 \fi
 
-ECC networks not only converge faster, but their sparsity also allows for significant performance increase. An implementation written in Rust was able to process 2000 MNIST  images  per second on a single thread on 2.7 GHz Intel i5 core. Each image was random patch of 25x25 pixels. The network had 734400 learnable parameters. When learning was enabled, it could train on 1700 images per second. 
+ECC networks not only converge faster, but their sparsity also allows for significant performance increase. An implementation written in Rust was able to process 2000 MNIST images per second on a single thread on 2.7 GHz Intel i5 core. Each image was random patch of 25x25 pixels. The network had 734400 learnable parameters. When learning was enabled, it could train on 1700 images per second. 
 
-\section{Sparse decorrelation networks}
+\subsection{Soft winner-takes-all}
 
-In the previous section we modeled inhibitory neurons as classes of mutually exclusive excitatory units. Their computational role was to implement winner-takes-all mechanism.
-It is a coarse and high-level abstraction. In the following section we will try to model the inhibition in an even finer and more detailed manner. 
-It will us to address two key problems of ECC networks. 
+So far we modeled inhibitory neurons as classes of mutually exclusive excitatory units. Their computational role was to implement winner-takes-all mechanism.
+It is a coarse, high-level abstraction and a source of two key problems of ECC networks. 
 \begin{enumerate}
-	\item Certain $\boldsymbol{x}$ patterns occur with disproportionately higher probabilities than others. During training it is very likely for a few $y$ neurons to bind strongly to those few patterns. As a result $p(y)$ for those few $y$ neurons is very high, leaving little room for any other $y$ to activate. In order to address this problem and prevent any neuron from dominating others, we used  \textit{entropy maximization} as a regularization method. This would be achieved by lowering $a_j$ for $y_j$ every time $y_j$ wins and slightly increasing $a_{\ne j}$ for all other losing $y_{\ne j}$. When repeated iteratively over time, this procedure would cause all $p(y_j)$ to be approximately equal (hence entropy of $\boldsymbol{y}$ would be maximized). The downside is that training would take significantly longer as values of $\boldsymbol{a}$ require many iterations to stabilize and become equal. If certain patterns $\boldsymbol{x}$ occur too rarely, they will be incorporated into the receptive field $p(\boldsymbol{x}|y_j)$ of the closest ``large enough'' cluster, thus defeating the purpose of out-of-distribution learning (if you see lions much less frequently than cats, the network will put them in the same cluster to balance probabilities, thus making it impossible to tell cats and lions apart). 
+	\item Certain $\boldsymbol{x}$ patterns occur with disproportionately higher probabilities than others. During training it is very likely for a few $y$ neurons to bind strongly to those few patterns. As a result $p(y)$ for those few $y$ neurons is very high, leaving little room for any other $y$ to activate. In order to address this problem and prevent any neuron from dominating, we could use  \textit{entropy maximization} as a regularization method. This would be achieved by lowering $a_j$ for $y_j$ every time $y_j$ wins and slightly increasing $a_{\ne j}$ for all other losing $y_{\ne j}$. When repeated iteratively over time, this procedure would cause all $p(y_j)$ to be approximately equal (hence entropy of $\boldsymbol{y}$ would be maximized). The downside is that training would take significantly longer as values of $\boldsymbol{a}$ require many iterations to stabilize and become equal. If certain patterns $\boldsymbol{x}$ occur too rarely, they will be incorporated into the receptive field $p(\boldsymbol{x}|y_j)$ of the closest ``large enough'' cluster, thus defeating the purpose of out-of-distribution learning (if you see lions much less frequently than cats, the network will put them in the same cluster to balance probabilities, thus making it impossible to tell cats and lions apart). 
 	\item It is assumed that every excitatory neuron $y$ has exactly one corresponding inhibitory neuron $e$. What would happen if some $y_1$ was connected to two $e_1$ and $e_2$ at the same time?
 	According to the definition all $y$ neurons connected to the same $e$ are mutually exclusive. Therefore $y_1$ would be doubly inhibited and it would activate if and only if no other neuron connected to either $e_1$ or $e_2$ was active. As a result $p(y_1)$ would be significantly lower and entropy maximization would become impossible. 
 \end{enumerate}
-These are significant theoretical and practical limitations of ECC networks. My next model not only addresses both of these problems but is also more biologically accurate.
+These are significant theoretical and practical limitations of ECC networks. How could we address them? 
 
+Instead of implementing winner-takes-all mechanism with $\argmax$ function, let us consider its ``softer'' version. 
+Suppose $\boldsymbol{x} \in \{0,1\}^n$ and $\boldsymbol{y} \in \{0,1\}^m$ are two consecutive fully connected layers with weight matrix $W\in \mathbb{R}^{n\times m}$ between them. The input $\boldsymbol{x}$ causes excitation $s=\boldsymbol{x} W$.
+Let us now model inhibition 
+
+
+ Neuron $y_j=1$ fires if the voltage $s_j$ exceeds certain threshold $s_j > d$. Otherwise its value remains $y_j=0$. There is no limit on the number of ``winners''. It could in theory so happen that all neurons $\boldsymbol{y}$ fire at the same time. Input patterns $\boldsymbol{x}$ are drawn from probability distribution $p(\boldsymbol{x})$. We can define probability of output $p(\boldsymbol{y})$ where
+\[p(y_j)=p(s_j > d^{+})=p(\boldsymbol{x} W_j > d)\]
+Note that $p(\boldsymbol{y}|\boldsymbol{x})$ is not interesting, because $\boldsymbol{x}$ exactly determines $\boldsymbol{y}$. The bits $y_j$ should not be treated as independent random variables, as they deterministically depend on $\boldsymbol{x}$ and therefore have non-trivial correlations $p(y_j|y_k)$. In order to implement ``soft WTA'' we can use inhibitory mechanisms to decorrelate the bits $p(y_j|y_k)\approx 0$. In the case of ECC networks, the bits were mutually exclusive, leading to $p(y_j|y_k) = 0$. Now we want to introduce negative weights $V \in \mathbb{R}^{m\times m}$ of effective inhibitory neurons (effective means that we do not introduce additional inhibitory neurons, but rather simulate their fast-spiking dynamics by allowing excitatory neurons $\boldsymbol{y}$ to have inhibitory synapses $V$ as well) and use Hebbian learning to find which pairs $p(y_j|y_k)$ occur frequently together and then increment the inhibitory connection from $y_k$ to $y_j$. Similarly as before, we could impose restriction that columns $W_j$ and $V_j$ are normalized to some constant magnitudes $\lVert W_j \rVert = a$ and $\lVert V_j \rVert = b$. This way each neuron $y_j$ needs to specialize by only listening to a subset of most important inputs $\boldsymbol{x}$ and inhibiting a subset of most correlated neighbors $\boldsymbol{y}$. 
+
+This approach has two key advantages. First, we no longer need to manually specify which neurons are mutually exclusive. Hebbian learning will automatically find the right cliques of highly correlated neurons. Such approach is ``softer'' and will work even if some cliques overlap. Second, if an unexpected input appears that triggers multiple uncorrelated neurons to fire, they will not interfere with each other, because their inhibitory connections would be weak. This could preserve more information about the input and enhance out-of-distribution learning.
+
+
+
+
+
+
+
+\subsection{Continuous and discrete computation}
+So far this work has been focused on attempts to discretize the neurons and distill from them an elegant algorithm. We should better understand the justification for such approach as well as its limitations.
+
+Biological neurons are highly sensitive to the relative timing of spikes (Lindsey, Morris, Shannon, \& Gerstein, 1997; Prut et al., 1998; Villa, Tetko,
+Hyland, \& Najem, 1999; Chang, Morris, Shannon, \& Lindsey, 2000; Tetko \&
+Villa, 2001). A careful measurement of axonal conduction delays in the
+mammalian neocortex (Swadlow 1985, 1988, 1992) showed that they could
+be as small as 0.1 ms and as large as 44 ms. Nevertheless, the propagation delay
+between any individual pair of neurons is precise and reproducible with a
+submillisecond precision (see Figure 1B; Swadlow 1985, 1994). Why would
+the brain maintain different delays with such precision if spike timing were
+not important? 
+
+Digital computers have an internal clock that synchronizes processing of CPU subunits. Each instruction has a dedicated clock cycle for its own execution and the order of instructions is well defined. The brain is an analog computer without centralized clock. If the axonal delays were not precise, then there would be no way to maintain the correct order of spikes (especially if those spikes are used to implement steps of a more abstract algorithm). Many formal models of neural networks are arranged into layers, which are executed sequentially and thus leverage the power of CPU clock. If the only role of precise axonal delays is to maintain a deterministic order of execution, then we would not need spiking neural networks and evaluating consecutive layers in discrete-time steps would be enough. In contrast, if the delays are to be treated as parameters of the model learned by the network, then they would be more than a mere substitute for a centralized clock. Nonetheless such possibility seems unlikely and there are no models of spiking networks that would tune those delays in the process of learning. 
+
+Even if the sole purpose of axonal delays was to maintain order, we should still consider whether continuous-time algorithms have more computational power. Is there something significant that could not be captured in discrete-time? 
+
+
+
+
+ECC networks assume that discrete clock cycles could substitute continuous delays. 
+
+
+
+\subsubsection{Model}
 
 
 
