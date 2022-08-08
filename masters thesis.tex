@@ -669,11 +669,23 @@ The mechanism of planning by performing parallel random walks over cognitive map
 
 \section{Sparse binary winner-takes-all networks}
 
-Rate-coded models of neurons (deep nets, slow feature analysis, predictive coding) often have sophisticated mathematical foundations, but they tend to ignore the temporal aspects of individual spikes, relative firing and latency. More biologically realistic neurons (Hodgkin-Huxley, integrate-and-fire, stimulus response model) use differential equations to simulate the exact temporal evolution of membrane potentials, but they often lack the ``bigger picture'' explanation of algorithms and computations performed by the neurons. 
+The model that I wish to introduced belongs to the broad family of sparse binary networks (sometimes called neuronal assemblies). These are formal models that investigate, which properties of neurons could be discretized while preserving their functionality. It is also an important research venue, as we currently lack good learning algorithms for networks with sparse and binary activations. Such data structures would be an ideal candidate for modelling Cayley graphs. 
 
-Sparse binary neuronal assemblies are an attempt to balance the realism and mathematical interpretability of neural models. It is also an important research venue, as we currently lack good learning algorithms for networks with sparse and binary activations. Such data structures would be an ideal candidate for modelling Cayley graphs. 
+\subsection{Discrete and continuous time}
 
-My model is an attempt at finding a simple, discrete and mathematically rigorous interpretation of the biological learning processes.
+Certain properties of neurons are widely accepted to be discrete. Each neuron by itself could be interpreted as a node in graph. Integrate-and-fire model represents spikes as binary (thus discrete) events in continuous time. Could we discretize the time as well?
+
+Biological neurons are highly sensitive to the relative timing of spikes (Lindsey, Morris, Shannon, \& Gerstein, 1997; Prut et al., 1998; Villa, Tetko,
+Hyland, \& Najem, 1999; Chang, Morris, Shannon, \& Lindsey, 2000; Tetko \&
+Villa, 2001). A careful measurement of axonal conduction delays in the
+mammalian neocortex (Swadlow 1985, 1988, 1992) showed that they could
+be as small as 0.1 ms and as large as 44 ms. Nevertheless, the propagation delay
+between any individual pair of neurons is precise and reproducible with a
+submillisecond precision (see Figure 1B; Swadlow 1985, 1994). Why would
+the brain maintain different delays with such precision if spike timing were
+not important? 
+
+Digital computers have an internal clock that synchronizes processing of CPU subunits. Each instruction has a dedicated clock cycle for its own execution and the order of instructions is well defined. The brain is an analog computer without centralized clock. If the axonal delays were not precise, then there would be no way to maintain the correct order of spikes (especially if those spikes are used to implement steps of a more abstract algorithm). Many formal models of neural networks are arranged into layers, which are executed sequentially and thus leverage the power of CPU clock. If the only role of precise axonal delays is to maintain a deterministic order of execution, then we would not need spiking neural networks and evaluating consecutive layers in discrete-time steps would be enough. In contrast, if the delays are to be treated as parameters of the model learned by the network, then they would be more than a mere substitute for a centralized clock. Nonetheless such possibility seems unlikely and there are no models of spiking networks that would tune those delays in the process of learning. 
 
 
 \subsection{Bayesian and variational inference}
@@ -1280,23 +1292,12 @@ It is a coarse, high-level abstraction and a source of two key problems of ECC n
 These are significant theoretical and practical limitations of ECC networks. How could we address them? 
 
 Instead of implementing winner-takes-all mechanism with $\argmax$ function, I propose its soft version. It is a generalisation of ECC networks that models inhibition in a more detailed and biologically plausible manner. 
-Let $\boldsymbol{x} \in \{0,1\}^n$ and $\boldsymbol{y} \in \{0,1\}^m$ be input and output neurons with fully connected weight matrix $W\in \mathbb{R}^{n\times m}$ between them. The input $\boldsymbol{x}$ causes excitation $s=\boldsymbol{x} W$. Let $U\in \{0,1\}^{m\times m}$ be the matrix representing effective inhibitory synapses between $\boldsymbol{y}$ neurons, where $u_{kj}=1$ means that $y_k$ inhibits $y_j$.  The value of $s$ could be interpreted in terms of latency coding. Higher $s_j$ corresponds to higher (momentary) frequency and lower latency. We define that a neuron $y_j$ is shunned if there exists some $y_k$ such that $u_{kj}=1$ and $s_k>s_j$. The neuron will fire $y_j=1$ if and only if it is not shunned. It is worth noting that when all entries of $U$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, thus  hard-WTA is a special case of soft-WTA. If $U$ is a block-diagonal matrix then soft-WTA becomes equivalent to hard-WTA with multiple mutually exclusive subpopulations of $\boldsymbol{y}$, thus multilayer convolutional ECC networks are a special case of soft-WTA. While $\argmax$ function requires aggregating information over all $\boldsymbol{y}$ neurons, soft-WTA uses only local connections (each $y_j$ only needs to know its own column $U_j$) and can be easily parallelised on GPU or neuromorphic hardware. Soft-WTA is also more general as it does not require dividing the network into layers or mutually-exclusive subpopulations. Instead we can express intricate network topologies by making $U$ sparse and then simulate all neurons in parallel. The only significant deviation from biological neurons is that ECC with soft-WTA runs in discrete time. 
+Let $\boldsymbol{x} \in \{0,1\}^n$ and $\boldsymbol{y} \in \{0,1\}^m$ be input and output neurons with fully connected weight matrix $W\in \mathbb{R}^{n\times m}$ between them. The input $\boldsymbol{x}$ causes excitation $s=\boldsymbol{x} W$. Let $U\in \{0,1\}^{m\times m}$ be the matrix representing effective inhibitory synapses between $\boldsymbol{y}$ neurons, where $u_{kj}=1$ means that $y_k$ inhibits $y_j$.  The value of $s$ could be interpreted in terms of latency coding. Higher $s_j$ corresponds to higher (momentary) frequency and lower latency. We define that a neuron $y_j$ is shunned if there exists some $y_k$ such that $u_{kj}=1$ and $s_k>s_j$. The neuron will fire $y_j=1$ if and only if it is not shunned. 
 
-\subsubsection{Discrete and continuous time}
+It is worth noting that when all entries of $U$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, thus  hard-WTA is a special case of soft-WTA. If $U$ is a block-diagonal matrix then soft-WTA becomes equivalent to hard-WTA with multiple mutually exclusive subpopulations of $\boldsymbol{y}$, thus multilayer convolutional ECC networks are a special case of soft-WTA. While $\argmax$ function requires aggregating information over all $\boldsymbol{y}$ neurons, soft-WTA uses only local connections (each $y_j$ only needs to know its own column $U_j$) and can be easily parallelised on GPU or neuromorphic hardware. Soft-WTA is also more general as it does not require dividing the network into layers or mutually-exclusive subpopulations. Instead we can express intricate network topologies by making $U$ sparse and then simulate all neurons in parallel.
 
-Biological neurons are highly sensitive to the relative timing of spikes (Lindsey, Morris, Shannon, \& Gerstein, 1997; Prut et al., 1998; Villa, Tetko,
-Hyland, \& Najem, 1999; Chang, Morris, Shannon, \& Lindsey, 2000; Tetko \&
-Villa, 2001). A careful measurement of axonal conduction delays in the
-mammalian neocortex (Swadlow 1985, 1988, 1992) showed that they could
-be as small as 0.1 ms and as large as 44 ms. Nevertheless, the propagation delay
-between any individual pair of neurons is precise and reproducible with a
-submillisecond precision (see Figure 1B; Swadlow 1985, 1994). Why would
-the brain maintain different delays with such precision if spike timing were
-not important? 
-
-Digital computers have an internal clock that synchronizes processing of CPU subunits. Each instruction has a dedicated clock cycle for its own execution and the order of instructions is well defined. The brain is an analog computer without centralized clock. If the axonal delays were not precise, then there would be no way to maintain the correct order of spikes (especially if those spikes are used to implement steps of a more abstract algorithm). Many formal models of neural networks are arranged into layers, which are executed sequentially and thus leverage the power of CPU clock. If the only role of precise axonal delays is to maintain a deterministic order of execution, then we would not need spiking neural networks and evaluating consecutive layers in discrete-time steps would be enough. In contrast, if the delays are to be treated as parameters of the model learned by the network, then they would be more than a mere substitute for a centralized clock. Nonetheless such possibility seems unlikely and there are no models of spiking networks that would tune those delays in the process of learning. 
-
-ECC is a formal neural network model that explores how many aspects of biological neurons can be captured with discretization or even binarization.
+It is possible to generalise further and consider $U \in \mathbb{R}^{m\times m}$.
+A neuron $y_j$ is shunned if there exists some $y_k$ such that  and $s_k-s_j>1-u_{kj}$. Such $u_{kj}$ can be flexibly adjusted through learning. This approach has two key advantages. First, we no longer need to manually specify which neurons are mutually exclusive. Hebbian learning will automatically find the right cliques of highly correlated neurons. Soft-WTA will work even if some cliques overlap. Second, if an unusual input causes multiple uncorrelated neurons to fire, they will not interfere with each other, because their inhibitory connections would be weak. This could preserve more information about the input and enhance out-of-distribution learning.
 
 \subsubsection{Hebbian learning}
 
@@ -1308,7 +1309,7 @@ If $s_j$ is very small, then there is high probability that it was driven by ins
 \[p(\gamma_j)=p(s_j > d)=p(\boldsymbol{x} W_j > d)\]
  Note that $p(\boldsymbol{\gamma}|\boldsymbol{x})$ is not interesting, because $\boldsymbol{x}$ exactly determines $\boldsymbol{\gamma}$. The bits $\gamma_j$ should not be treated as independent random variables, as they deterministically depend on $\boldsymbol{x}$ and therefore have non-trivial correlations $p(\gamma_j|\gamma_k)$. We could use inhibition to shun and decorrelate the bits $p(\gamma_j|\gamma_k)\approx 0$ (decorrelation was one of the goals of slow-feature analysis). In the case of hard-WTA, all bits are mutually exclusive and $p(\gamma_j|\gamma_k) = 0$ is guaranteed. Now we want to introduce effective inhibitory synapses and use Hebbian learning to find which pairs $p(\gamma_j|\gamma_k)$ occur frequently together and then increment the inhibitory connection $v_{kj}$ from $y_k$ to $y_j$. 
  
-Note that we can use product $s_j s_k$ as a proxy for determining
+We can use product $s_j s_k$ as a proxy for determining
  \[
 \mathbb{E}(s_j s_k) =  \mathbb{E}(\boldmath{x} W_j \boldmath{x} W_k)=  \mathbb{E}(W_j^T \boldmath{x}^T  \boldmath{x} W_k) = W_j^T \mathbb{E}(\boldmath{x}^T  \boldmath{x}) W_k = W_j^T C W_k 
  \]
@@ -1317,11 +1318,7 @@ Note that we can use product $s_j s_k$ as a proxy for determining
  
  If the threshold $d$ is sufficiently high, we can assume $s_j \approx 1$ when $\gamma_j=1$. Then we can simplify $\mathbb{E}(s_j s_k|\gamma_j)\approx \mathbb{E}(s_k|\gamma_j)$. In biological neurons, inhibitory long-term potentiation (iLTP) \cite{inhibitory_plasticity} states that synapse ($u_{kj}$) is strengthened when presynaptic interneuron fires ($y_k=1$) and postsynaptic neuron is depolarised (high $s_j$) but does not fire ($y_j=0$). 
  
- 
- 
- $V \in \mathbb{R}^{m\times m}$ We define $y_j=1$ if and only if $\gamma_j=1$ is excited and it is not shunned $\neg \exists_k s_k > s_j$. 
 
-This approach has two key advantages. First, we no longer need to manually specify which neurons are mutually exclusive. Hebbian learning will automatically find the right cliques of highly correlated neurons. Soft-WTA will work even if some cliques overlap. Second, if an unusual input causes multiple uncorrelated neurons to fire, they will not interfere with each other, because their inhibitory connections would be weak. This could preserve more information about the input and enhance out-of-distribution learning.
 
 
 
