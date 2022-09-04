@@ -1334,8 +1334,16 @@ Several special cases are worth pointing out. Consider transitive $U$, meaning t
    2. set $y_j=0$ if  $\exists_k u_{kj}=1 \wedge s_j<s_k$
         otherwise set $y_j=1$
 \end{lstlisting}
-because  $y_{k}$ could be $0$ only if there exists some other $y_l=1$ that shunned it.
-When all entries of $U$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, thus  hard-WTA is a special case of soft-WTA. If $U$ is a block-diagonal matrix then soft-WTA becomes equivalent to hard-WTA with multiple mutually exclusive subpopulations of $\boldsymbol{y}$, thus multilayer convolutional ECC networks are a special case of soft-WTA, whereas more general $U$ does not require clear division into layers (much like real brain).
+because  $y_{k}$ could be $0$ only if there exists some other $y_l=1$ that shunned it. Furthermore $U$ is reflexive if $u_{jj}=1$ for all $j$, but reflexivity does not change the outcome because $s_j > s_j$ is always false. $U$ is  symmetric when  $u_{jk}=u_{kj}$. If $U$ is transitive, symmetric and (optionally) reflexive then $U$ becomes an equivalence relation on $y$. Then the algorithm simplifies to
+\begin{lstlisting}
+1. for every equivalence class $[j]$
+    2. find $k = \argmax s_i$ over all $i \in [j]$
+    3. set $y_k=1$ 
+    4. set $y_i=0$ for all $i\in [j]$ where $i\ne k$
+\end{lstlisting}
+It can be seen that multilayer convolutional ECC networks are a special case of soft-WTA.
+When all entries of $U$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, which corresponds to an ECC network with a single inhibitory neuron. 
+This leads to the conclusion that, in the general case, $U$ does not require clear division into layers (much like real brain).
 
 The product $s_j s_k$ is a proxy for determining
 \[
@@ -1345,7 +1353,7 @@ where $C=\mathbb{E}(\boldmath{x}^T  \boldmath{x})$ is the ``correlation'' matrix
 In the special case where all bits are uncorrelated $C=I$, we obtain cosine similarity $\mathbb{E}(s_j s_k)=W_j^TW_k$ of weight columns. From the  perspective of k-means algorithm, the expected $s_j s_k$ can be used to identify closely neighbouring centroids $p(\boldsymbol{x}|y_j)$ and $p(\boldsymbol{x}|y_k)$. 
 
 
-Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is necessary for slow feature analysis, can be achieved by setting $u_{kj}=u_{jk}=1$. Of course if all $u_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we should state that learning $U$ is the problem of minimising ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time maximising sparsity of $U$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($u_{kj}=u{kj}=0$). 
+Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is necessary for slow feature analysis, can be achieved by setting $u_{kj}=u_{jk}=1$. Of course if all $u_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we should state that learning $U$ is the problem of minimising ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time maximising sparsity of $U$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($u_{kj}=u_{jk}=0$). 
 
 
 Let us generalize further by considering $U \in \mathbb{R}^{m\times m}$.
