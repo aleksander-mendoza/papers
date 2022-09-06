@@ -1127,7 +1127,7 @@ p(\argmax_j s_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz
 \]
 where $u_{kj}=r_j-r_k$. If $u_{kj} \ge u_{k'j}$ then $p(s_j + u_{kj} < z) \le p(s_j + u_{k'j}< z)$. If $u_{kj} \ge u_{k'j}$  for all $j$ then $p(\argmax_j s_j=k) \le p(\argmax_j s_j=k')$. If $r_k \le r_{k'}$ then $u_{kj} = r_j-r_k \ge r_j-r_{k'} = u_{k'j}$. This implies that if $r_k \le r_{k'}$ then $p(\argmax_j s_j=k) \le p(\argmax_j s_j=k')$. 
 
-Further let us consider a more general case of  $k=\argmax \boldsymbol{s}+\boldsymbol{r}$ where $s_j\sim D_j$ are independent random variables drawn from (possibly different) continuous probability mass functions $D_j$. Continuity of $p(s_j=z)$ implies continuity of $p(s_j < z)$. Therefore $p(s_j +r_j< z)$ is continuous with respect to $r_j$, which further implies continuity of  $p(\argmax_j s_j=k)$ with respect to $\boldsymbol{r}$ (because integral of a continuous function is continuous). The minimum and maximum value of $r_k$ is unbounded, therefore we can choose it to obtain $p(\argmax_j s_j=k)$ arbitrarily close to $0$ or $1$. By intermediate value theorem we know that $p(\argmax_j s_j=k)$ takes on any value between $0$ and $1$, therefore there exists some $r_k$ such that  $p(\argmax_j s_j=k)=\frac{1}{m}$. We can find such $r_k$ by following the MSE gradient.
+Further let us consider a more general case of  $k=\argmax \boldsymbol{s}+\boldsymbol{r}$ where $s_j\sim D_j$ are independent random variables drawn from (possibly different) distributions $D_j$ with continuous probability mass functions. Continuity of $p(s_j=z)$ implies continuity of $p(s_j < z)$. Therefore $p(s_j +r_j< z)$ is continuous with respect to $r_j$, which further implies continuity of  $p(\argmax_j s_j=k)$ with respect to $\boldsymbol{r}$ (because integral of a continuous function is continuous). The minimum and maximum value of $r_k$ is unbounded, therefore we can choose it to obtain $p(\argmax_j s_j=k)$ arbitrarily close to $0$ or $1$. By intermediate value theorem we know that $p(\argmax_j s_j=k)$ takes on any value between $0$ and $1$, therefore there exists some $r_k$ such that  $p(\argmax_j s_j=k)=\frac{1}{m}$. We can find such $r_k$ by following the MSE gradient.
 \[
 \frac{d r_k}{d t} = \frac{1}{m}-p(\argmax_j s_j=k)
 \]
@@ -1189,18 +1189,18 @@ Let $\boldsymbol{s}=\boldsymbol{x} W$. The product $s_j s_k$ is a proxy for dete
 \[
 \mathbb{E}(s_j s_k) =  \mathbb{E}(\boldmath{x} W_j \boldmath{x} W_k)=  \mathbb{E}(W_j^T \boldmath{x}^T  \boldmath{x} W_k) = W_j^T \mathbb{E}(\boldmath{x}^T  \boldmath{x}) W_k = W_j^T C W_k 
 \]
-where $C=\mathbb{E}(\boldmath{x}^T  \boldmath{x})$ is the ``correlation'' matrix. In the case of sparse binary vectors it would be undesirable to say that $x_h,x_i$ are correlated if they are always silent together $x_i=x_h=0$. Therefore  $C$ is not a ``classical'' correlation (but would be if we first whitened $\boldsymbol{x}$). 
+where $C=\mathbb{E}(\boldmath{x}^T  \boldmath{x})$ is the ``correlation'' matrix. In the case of sparse binary vectors it would be undesirable to say that $x_h,x_i$ are correlated if they are always silent together $x_i=x_h=0$. Therefore  $C$ is not a correlation according to ``classical'' definition (but would be if we first whitened $\boldsymbol{x}$). 
 In the special case where all bits are uncorrelated $C=I$, we obtain cosine similarity $\mathbb{E}(s_j s_k)=W_j^TW_k$ of weight columns. From the  perspective of k-means algorithm, the expected $s_j s_k$ can be used to identify closely neighbouring centroids $p(\boldsymbol{x}|y_j)$ and $p(\boldsymbol{x}|y_k)$. 
 
 Similarly, the difference $s_j-s_k$ represents
 \[
-\mathbb{E}(s_j - s_k) = \mathbb{E}[\boldmath{x} (W_j - W_k)]
+\mathbb{E}(s_j - s_k) = \mathbb{E}( \boldmath{x} (W_j - W_k) )
 \]
 \[
-\mathbb{E}[(s_j - s_k)^2] = \mathbb{E}[(W_j - W_k)^T \boldmath{x}^T \boldmath{x} (W_j - W_k)]
+\mathbb{E}( (s_j - s_k)^2 ) = \mathbb{E}( (W_j - W_k)^T \boldmath{x}^T \boldmath{x} (W_j - W_k) )
 \]
 \[
-\mathbb{E}(|s_j - s_k|) = \mathbb{E}[\sqrt{(s_j - s_k)^2}] = 
+\mathbb{E}(|s_j - s_k|) = \mathbb{E}\big(\sqrt{(s_j - s_k)^2}\big) = 
 \sqrt{(W_j - W_k)^T C (W_j - W_k)}
 \]
 In the special case when bits are decorrelated $C=I$ we have
@@ -1224,9 +1224,9 @@ Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``corr
 
 To make this idea more formal, let us minimise the loss function
 \[
-\sum_{kj}\mathbb{E}[(s_k-s_j - u_{kj}|y_k)^2]
+\sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
 \]
-The probability $p(y_j\text{ shunned by} y_k)$ is equal to
+The probability $p(y_j\text{ shunned by } y_k)$ is equal to
 \[
 p(s_j+u_{kj}<s_k \wedge y_k=1) = p(y_k)p(s_j+u_{kj}<s_k|y_k)
 \]
