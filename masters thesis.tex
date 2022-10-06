@@ -632,11 +632,13 @@ Formal language $L$ over alphabet $A$ is a set of strings $L\subset A^*$. Presen
 
 Instead of inferring formal languages $L$ and automata $G$, we could infer groups $S$ and their presentations $\langle A|\mathcal{R} \rangle$. To avoid confusion, let us from now on use the term \textit{trajectory} instead \textit{presentation} when referring to $\phi$. The agent moves in environment $S$ and its trajectory $\phi:\mathbb{N}\rightarrow S \times A$ is the states visited along the way $\phi(t)=(S_t,A_t)$. When $\phi$ is an informat, then it also includes information about reward. My claim is that finitely-presented groups are learnable in the limit, and the learning algorithm is as follows.
 
-Define $s\in S_{<n}$ if and only if $\phi(t)=(s,a)$ for some $t< n$ and $a$. For every pair of states $s,s' \in S_{<n}$ let $R_{ss'}^{(1)}$ be the set of all $A_t$ such that $S_tA_t=S_{t+1}$ where $S_t=s$ and $S_{t+1}=s'$. Let $R_{ss'}^{(n)}$ be defined recursively as 
+Define $s\in S_{<n}$ if and only if $\phi(t)=(s,a)$ for some $t< n$ and $a$. For every pair of states $s,s' \in S_{<n}$ let $R_{ss'}^{(1)}$ be the set of all $A_t$ such that $S_tA_t=S_{t+1}$ where $S_t=s$ and $S_{t+1}=s'$. Let $R_{ss'}^{(n)}$ be defined recursively as (matrix multiplication formula)
 \[
-R_{ss''}^{(n+1)} = \bigcup\limits_{\substack{s'\in S_{<n} \\ s'\ne s \\ s'\ne s''}} R_{ss'}^{(n)}R_{s's''}^{(n)}
+R_{ss''}^{(n+1)} = \bigcup\limits_{s'\in S_{<n}} R_{ss'}^{(n)}R_{s's''}^{(n)}
 \]
-(Note that this is matrix multiplication with product and sum of formal languages as multiplicative and additive operations.) Taking the limit $R_{ss'}^{(\infty)}$ yields transitive closure. Computing $R_{ss'}^{(\infty)}$ can be done in finite number of steps because $S_{<n}$ is finite. If $r\in R_{ss}^{(\infty)}$ then $sr=s$ and $r=e$. The final result $\mathcal{R}\subset A^*$ is
+where $R_{ss'}^{(n)}R_{s's''}^{(n)}$ is the product of formal languages, except that we define $R_{ss}^{(n)}$ to be neutral element\[
+R_{ss}^{(n)}R_{ss'}^{(n)}=R_{ss'}^{(n)}R_{s's'}^{(n)}=R_{ss'}^{(n)}\]
+Taking the limit $R_{ss'}^{(\infty)}$ yields transitive closure. Computing $R_{ss'}^{(\infty)}$ can be done in finite number of steps because $S_{<n}$ is finite. If $r\in R_{ss}^{(\infty)}$ then $sr=s$ and $r=e$. The final result $\mathcal{R}\subset A^*$ is
 \[
 \mathcal{R} = \bigcup\limits_{s\in S_{<n}} R_{ss}^{(\infty)}
 \]
