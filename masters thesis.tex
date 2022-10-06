@@ -634,23 +634,26 @@ Instead of inferring formal languages $L$ and automata $G$, we could infer group
 
 Define $s\in S_{<n}$ if and only if $\phi(t)=(s,a)$ for some $t< n$ and $a$. For every pair of states $s,s' \in S_{<n}$ let $R_{ss'}^{(1)}$ be the set of all $A_t$ such that $S_tA_t=S_{t+1}$ where $S_t=s$ and $S_{t+1}=s'$. Let $R_{ss'}^{(n)}$ be defined recursively as (matrix multiplication formula)
 \[
-R_{ss''}^{(n+1)} = \bigcup\limits_{s'\in S_{<n}} R_{ss'}^{(n)}R_{s's''}^{(n)}
+R_{ss''}^{(i+1)} = \bigcup\limits_{s'\in S_{<n}} R_{ss'}^{(i)}R_{s's''}^{(1)}
 \]
-where $R_{ss'}^{(n)}R_{s's''}^{(n)}$ is the product of formal languages, except that we define $R_{ss}^{(n)}$ to be neutral element\[
-R_{ss}^{(n)}R_{ss'}^{(n)}=R_{ss'}^{(n)}R_{s's'}^{(n)}=R_{ss'}^{(n)}\]
-Taking the limit $R_{ss'}^{(\infty)}$ yields transitive closure. Computing $R_{ss'}^{(\infty)}$ can be done in finite number of steps because $S_{<n}$ is finite. If $r\in R_{ss}^{(\infty)}$ then $sr=s$ and $r=e$. The final result $\mathcal{R}\subset A^*$ is
+where $R_{ss'}^{(i)}R_{s's''}^{(j)}$ is the product of formal languages, except that we treat diagonal entries $R_{ss}^{(i)}$ as neutral elements
 \[
-\mathcal{R} = \bigcup\limits_{s\in S_{<n}} R_{ss}^{(\infty)}
+R_{ss}^{(i)}R_{ss'}^{(j)}=R_{ss'}^{(j)}R_{s's'}^{(i)}=R_{ss'}^{(i)}
+\]
+Each $R_{ss'}^{(i)}$ can hold words of length at most $i$.
+The final set $R_{ss'}^{(i)}$ for $i=|S_{<n}|$ yields transitive closure. If $r\in R_{ss}^{(i)}$ then $sr=s$ and $r=e$. The final result $\mathcal{R}\subset A^*$ is (trace of matrix)
+\[
+\mathcal{R} = \bigcup\limits_{s\in S_{<n}} R_{ss}^{(i)}\text{ where }i=|S_{<n}|
 \]
 This concludes $\mathcal{A}$.
 
 
-Let us now prove that $\mathcal{A}$ learns $S$ in the limit. By assumption, $S$ is finitely presented and the image $\phi(\mathbb{N})=S \times A$ covers all edges in the Cayley graph of $S$. The transitive closure $R_{ss'}^{(\infty)}$ contains all the relations shorter than $n$. As $n$ goes to infinity, all necessary relations will eventually be observed. Some of them may be redundant and could be removed using Tietze transformations. In the general case deciding which relations can be removed is equivalent to solving the word problem and is undecidable. Fortunately, it does not affect learning in the limit, as all the presentations are equivalent, and we do not need to perform the Tietze transformations. This concludes the proof.
+Let us now prove that $\mathcal{A}$ learns $S$ in the limit. By assumption, $S$ is finitely presented and the image $\phi(\mathbb{N})=S \times A$ covers all edges in the Cayley graph of $S$. The transitive closure $R_{ss'}^{(i)}$ contains relators $r$ of length $|r| \le i$. Let $S=\langle A | R^* \rangle$ be the true presentation of $S$. All relators in $R^*$ must be shorter than $|S|$ (or finite if $S$ is infinite) or otherwise they would contain a subword equal to $e$, which could be removed. As $n$ goes to infinity, $i=|S_{<n}|$ approaches $|S|$ and all relators of $R^*$ will eventually be observed and contained in some $R_{ss}^{(i)}$. Some of them may be redundant and could be removed using Tietze transformations. In the general case deciding which relations can be removed is equivalent to solving the word problem and is undecidable. Fortunately, it does not affect learning in the limit, as all the presentations are equivalent, and we do not need to perform the Tietze transformations. This concludes the proof.
 
 It remains to show how this could be used later by the agent to find reward.
 During learning some states $S_{<n}$ will be observed but the correct presentation of $S$ could be inferred with even a few examples (depending on luck and size of minimum  presentation). The locations of visited states should be kept in memory. Planning can be achieved by performing \textit{coset enumeration} \cite{johnson_1997}, which is a form of breath-first-search. Even if $S$ is infinite, we could still use coset enumeration to find the shortest path (geodesic word) to a desired destination state, provided that we've visited said state at least once in the past. 
 
-It is worthwhile to compare the efficiency of this method with temporal difference learning, which requires multiple passes over the same state to converge.
+It is worthwhile to compare the efficiency of this method with temporal difference learning, which requires multiple passes over the same state to converge. Inference of groups could also hold the key to transfer learning, as many environments with different reward landscapes could share the same underlying group structures.
 
 
 \subsection{Group manifolds}
@@ -1474,6 +1477,7 @@ In the general case, continuous values of $U$ can be adjusted independently (wit
 Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we state that learning $U$ is the problem of minimizing ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
 
 \paragraph{Learning soft-WTA $U$ weights}
+\iffalse
 Let us recall that the entropy maximization algorithm  is based on
 \[	
 p(\argmax_j s_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
@@ -1483,7 +1487,7 @@ which assumes that all variables $s_j$ are independent. Soft-WTA relaxes this as
 p(y_k) \approx \int_{z}p(s_k=z) \prod_{j\ne k} \big(p(s_j+u_{kj}<z|y_j)p(y_j)+p(\neg y_j)\big) dz
 \] 
 We know that $\boldsymbol{y}$ is uniquely determined by $\boldsymbol{s}$ but the formula above considers $p(y_j)$ and $p(s_k=z)$, as if $\boldsymbol{y}$, $\boldsymbol{s}$ were both random variables. The reason for this is simplification. The interactions between bits of $\boldsymbol{y}$ are too complex to express $p(y_k)$ exactly. 
-
+\fi
 Consider minimization of the MSE loss function
 \[
 \sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
