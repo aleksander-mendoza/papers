@@ -610,17 +610,51 @@ v_\pi(sg) = v_\pi(sh) \text{ for all }s\in S
 \]
 Such constraints are not only applicable to value $v_\pi$ (model-free methods) but also to transition $p:S\times A \rightarrow S$ function itself (model-based methods).
 \[
-p(s,g)= p(s,h) \text{ for all }s\in S 
+p^*(s,g)= p^*(s,h) \text{ for all }s\in S 
 \]
+where $p^*:S\times A^* \rightarrow S$ is defined recursively
+\begin{equation*}
+p^*(s, A_1 ... A_n) = \begin{cases}
+		p(p^*(s, A_1 ... A_{n-1}),A_n) & n>0\\
+		s & n=0
+	\end{cases}
+\end{equation*}
 
 
 If we could include the geometric priors $\mathcal{R}$ directly in the structure of $v$ and $\pi$, then the search space would become much narrower, and reinforcement learning might progress more efficiently. The current deep learning approaches are naive, as they not only lack geometric priors on $S$ but are structurally incapable of including them. What type of deep architecture are we missing, that could address this problem? Most likely no such architecture exists, for the simple reason that symmetries in the action space are dynamic, can change with the environment and are usually not (fully) known a'priori. This stands in stark contrast with symmetries in the signal space, which can be given a'priori and do not need to change over time.
 
-\subsection{Group manifolds}
 
+\subsection{Inductive group inference}
+Theory of inductive inference \cite{deLaHiguera} studies how certain unknown mechanisms can be guessed by observing their behavior, such as outputs (in case of functions) or member elements (in case of sets). The theory defines an important notion of \textit{learnability in the limit}. Traditionally, it has been focused on learning formal grammars and finite state automata by observing strings belonging to their formal languages. Let us shortly review it, before we extend this theory to groups. 
+
+Formal language $L$ over alphabet $A$ is a set of strings $L\subset A^*$. Presentation $\phi$ of a non-empty set $\mathcal{X}$ is an enumeration $\phi:\mathbb{N}\rightarrow \mathcal{X}$ of all its elements $\phi(\mathbb{N})=\mathcal{X}$. We refer to $\phi$ as \textit{text} when $X=A^*$ and as \textit{informant} when $X=A^*\times \{0,1\}$. Let $\mathcal{L}$ be a class of languages.
+ $Pres(\mathcal{L})=\{\phi:\mathbb{N}\rightarrow A^* : \phi(\mathbb{N}) = L \in \mathcal{L}\}$ is the set of all presentations of all languages in $\mathcal{L}$. Text only consists of positive examples $w\in L$, whereas informant has both positive $(w,1) \in L \times \{1\}$ and negative $(w,0) \in \bar{L} \times \{0\}$ examples. Grammar or automaton $G$ is a representation of some language $L$. We use $\mathbb{L}(G)=L$ to denote that $L$ is represented by $G$. Let $\mathcal{G}$ be a class of grammars (or automata) and $\mathbb{L}(\mathcal{G})=\mathcal{L}$ the corresponding class of languages. Learning algorithm $\mathcal{A}:Pres(\mathcal{L})\rightarrow\mathcal{G}$ is a function that takes the first $n$ elements of presentation $\phi$ as input (those are the observed strings from $L$) and returns a learned (inferred) grammar $G$. Language $L$ is learnable in the limit if there exists some $\mathcal{A}$ such that for all $\phi$, exists $n_0$ such that $\mathbb{L}(\mathcal{A}(\phi))=L$ for all $n \ge n_0$.  
+
+Instead of inferring formal languages $L$ and automata $G$, we could infer groups $S$ and their presentations $\langle A|\mathcal{R} \rangle$. To avoid confusion, let us from now on use the term \textit{trajectory} instead \textit{presentation} when referring to $\phi$. The agent moves in environment $S$ and its trajectory $\phi:\mathbb{N}\rightarrow S \times A$ is the states visited along the way $\phi(t)=(S_t,A_t)$. When $\phi$ is an informat, then it also includes information about reward. My claim is that finitely-presented groups are learnable in the limit, and the learning algorithm is as follows.
+
+Define $s\in S_{<n}$ if and only if $\phi(t)=(s,a)$ for some $t< n$ and $a$. For every pair of states $s,s' \in S_{<n}$ let $R_{ss'}^{(1)}$ be the set of all $A_t$ such that $S_tA_t=S_{t+1}$ where $S_t=s$ and $S_{t+1}=s'$. Let $R_{ss'}^{(n)}$ be defined recursively as 
+\[
+R_{ss''}^{(n+1)} = \bigcup\limits_{\substack{s'\in S_{<n} \\ s'\ne s \\ s'\ne s''}} R_{ss'}^{(n)}R_{s's''}^{(n)}
+\]
+(Note that this is matrix multiplication with product and sum of formal languages as multiplicative and additive operations.) Taking the limit $R_{ss'}^{(\infty)}$ yields transitive closure. Computing $R_{ss'}^{(\infty)}$ can be done in finite number of steps because $S_{<n}$ is finite. If $r\in R_{ss}^{(\infty)}$ then $sr=s$ and $r=e$. The final result $\mathcal{R}\subset A^*$ is
+\[
+\mathcal{R} = \bigcup\limits_{s\in S_{<n}} R_{ss}^{(\infty)}
+\]
+This concludes $\mathcal{A}$.
+
+
+Let us now prove that $\mathcal{A}$ learns $S$ in the limit. By assumption, $S$ is finitely presented and the image $\phi(\mathbb{N})=S \times A$ covers all edges in the Cayley graph of $S$. The transitive closure $R_{ss'}^{(\infty)}$ contains all the relations shorter than $n$. As $n$ goes to infinity, all necessary relations will eventually be observed. Some of them may be redundant and could be removed using Tietze transformations. In the general case deciding which relations can be removed is equivalent to solving the word problem and is undecidable. Fortunately, it does not affect learning in the limit, as all the presentations are equivalent, and we do not need to perform the Tietze transformations. This concludes the proof.
+
+It remains to show how this could be used later by the agent to find reward.
+During learning some states $S_{<n}$ will be observed but the correct presentation of $S$ could be inferred with even a few examples (depending on luck and size of minimum  presentation). The locations of visited states should be kept in memory. Planning can be achieved by performing \textit{coset enumeration} \cite{johnson_1997}, which is a form of breath-first-search. Even if $S$ is infinite, we could still use coset enumeration to find the shortest path (geodesic word) to a desired destination state, provided that we've visited said state at least once in the past. 
+
+It is worthwhile to compare the efficiency of this method with temporal difference learning, which requires multiple passes over the same state to converge.
+
+
+\subsection{Group manifolds}
 For an agent moving in a large room, the state space $S$ might look like a group of two-dimensional translations... until it hits a wall. To rigorously discuss this phenomenon, we need to assume that $S$ is a metric space. Let us measure the distance $d(s,s')$ between two points $s,s'\in S$ as the length $t$ of the shortest trajectory $s'=sa_1...a_{t}$. Such metric induces topology of open balls on $S$. For example, even though a room-like environment is not a translation group, it might look indistinguishable within some open ball. More formally, let $G=\langle A|\mathcal{Q} \rangle$ be a group and $S=\langle A|\mathcal{R} \rangle$ a monoid, both generated by the same $A$. Let $E$ be a subset $E \subset S$ but not necessarily a submonoid. We say that $E$ is isomorphic to $G$ if there exists a mapping $f:S \rightarrow G$ such that $f(e)a=f(ea)$ for all $e\in E$, $a\in A$. It is a relaxed definition of group isomorphism, where $E$ need not be closed under the group operation. Let us refer to $E$ as a \textit{group manifold} embedded in $S$ which locally resembles $G$.
 
-We should notice that $A$ plays an important role. Depending on the chosen generator, the isomorphism may or may not hold. $A$ can be used to encode the radius of open ball around each $e$. The smallest possible generator  $G=\langle A|\mathcal{Q} \rangle$  corresponds to radius $1$, while  $G=\langle A^t|\mathcal{Q}' \rangle$  requires  $f(e)a^t=f(ea^t)$ to hold for up to $r$ steps away from $e$. Radius $r$ does not change the generated group $\langle A|\mathcal{Q} \rangle=\langle A^t|\mathcal{Q}' \rangle$ so long as $\mathcal{Q}'$ and $\mathcal{S}'$ contain  relations equivalent to those of $\mathcal{Q}$ and $\mathcal{S}$. 
+We should notice that $A$ plays an important role. Depending on the chosen generator, the isomorphism may or may not hold. $A$ can be used to encode the radius of open ball around each $e$. The smallest possible generator  $G=\langle A|\mathcal{Q} \rangle$  corresponds to radius $1$, while  $G=\langle A^{\le r}|\mathcal{Q}' \rangle$  requires  $f(e)a^t=f(ea^t)$ to hold for up to $t\le r$ steps away from $e$. Radius $r$ does not change the generated group $\langle A|\mathcal{Q} \rangle=\langle A^{\le r}|\mathcal{Q}' \rangle$ so long as $\mathcal{Q}'$ and $\mathcal{S}'$ contain  relations equivalent to those of $\mathcal{Q}$ and $\mathcal{S}$. 
 
 We define $E$ to be dense in $S$ if it is a subset of $S$ such that for every element of $s\in S$ there exists $e\in E, a\in A$ and $ea=s$. 
 Let us define $E$ to be the span of $G$ in $S$ if $E$ is the largest subset of $S$ that's isomorphic to $G$.  The span is unique, which follows easily from definition of isomorphism (it suffices to define $E =\{e\in S:\forall_a f(e)a=f(ea)\}$).  
@@ -651,18 +685,9 @@ The major difference between the two approaches becomes more evident when we ass
 Energy function gives us a way of elegantly solving the exploration and exploitation dilemma. The energy is intrinsic and known to the agent. Therefore, we can introduce a ``hunger'' threshold $h$. The agent shall exploit the environment when $E(t) < h$. If the energy is abundant $E(t)>h$ some of it can be ``wasted'' for exploration. 
 
 This leads us to an alternative formulation of the reinforcement learning problem.
-The task of an agent is to learn structure of $S$ during the exploration (or latent learning) phase. Then the exploitation (or reward maximization) phase is defined as the search for any source of energy $R$ that is greater than some threshold. If $S$ is discrete, then search can be performed on the learned Cayley graph of $S$. In continuous case we can resort to \textit{rough Cayley graphs} (Analogues of Cayley graphs for topological groups). 
+The task of an agent is to learn structure of $S$ during the exploration (or latent learning) phase. Then the exploitation (or reward maximization) phase is defined as the search for any source of energy $R$ that is greater than some threshold $R_{min}$. If $S$ is discrete, then search can be performed on the learned Cayley graph of $S$. In continuous case we can resort to \textit{rough Cayley graphs} (analogues of Cayley graphs for topological groups). 
 
 It should be noted that temporal-difference learning of $v$ does not work well with sparse rewards, whereas graph-based search only makes sense under sufficient sparsity. Otherwise, if the reward was easy to find, then the search would always end quickly and find very short myopic paths. 
-
-Temporal difference is inefficient. It requires multiple passes over the same state (fig. \ref{fig:dynamic_programming}). Building a graph of $S$ could be much faster, as it requires visiting each state transition only once. If, for example, we impose the geometric prior of $S$ being a 2D grid (as it is the case on fig. \ref{fig:dynamic_programming}), then it becomes enough to only visit every state once and all the missing state transitions can be inferred automatically. Once we know the structure of $S$, then we can use any of the graph-traversal algorithms, such as depth- or breadth-first search. Finding a path to the nearest (sparse) reward will with high probability give results equivalent to following $v$.
-\begin{figure}[!htbp]
-	\centering
-	\includegraphics[width=11cm]{dynamic_programming}
-	\caption{Policy iteration method can approximate optimal $\pi_*$ and $v_*$ after enough iterations of temporal-difference algorithm. Grey states contain reward. Agent can move up, down, left or right. Policy is indicated by arrows. If there are multiple arrows, then one is chosen at random. $k$ is the iteration number.}
-	\label{fig:dynamic_programming}
-\end{figure}
-
 
 \subsection{Representing and navigating Cayley graphs}
  
@@ -678,8 +703,6 @@ The real brain does not seem to be working in such a way. It requires very littl
 
 The mechanism of planning by performing parallel random walks over cognitive maps is very simple. If it was indeed true that hippocampus worked in this way, then another hypothesis would immediately come to mind. Perhaps higher cognitive functions and human-like intelligence could reuse some of the same mechanism, but at a larger scale. 
 
-\subsection{Minimal quotient group inference algorithm}
-Theory of inductive grammatical inference studies how certain unknown mechanisms can be guessed by observing their behaviour, such as outputs (in case of functions) or member elements (in case of sets). The theory defines an important notion of \textit{learnability in the limit}. Traditionally it has been focused on learning formal grammars and finite state automata by observing strings belonging to their formal languages. Automata theory is deeply interconnected with abstract algebra, especially the \textit{word problem}. Let us shortly review inductive inference of formal languages, before we extend it to groups. Formal language $\mathcal{L}$ over alphabet $A$ is a set of strings $\mathcal{L}\subset A^*$. Presentation $\phi$ of a non-empty set $\mathcal{X}$ is an enumeration $\phi:\mathbb{N}\rightarrow \mathcal{X}$ of all its elements $\phi(\mathbb{N})=\mathcal{X}$. $Pres()$ Text $TEXT(\mathcal{L})$ is a set of functions $TEXT(\mathcal{L})=\{\phi:\mathbb{N}\rightarrow A^* : \phi(\mathbb{N})=L\}$. typically defined is We define Let $S$ be a group.
 
 \section{Sparse binary winner-takes-all networks}
 
@@ -699,7 +722,7 @@ not important?
 
 Digital computers have an internal clock that synchronizes processing of CPU subunits. Each instruction has a dedicated clock cycle for its own execution, and the order of instructions is well-defined. The brain is an analog computer without a centralized clock. If the axonal delays were not precise, then there would be no way to maintain the correct order of spikes (especially if those spikes are used to implement steps of a more abstract algorithm). Many formal models of neural networks are arranged into layers, which are executed sequentially and thus take advantage of CPU clock. If the only role of precise axonal delays is to maintain a deterministic order of execution, then we would not need spiking neural networks and evaluating consecutive layers in discrete-time steps would be enough. In contrast, if the delays are to be treated as parameters of the model learned by the network, then they would be more than a mere substitute for a centralized clock. Nonetheless, such possibility seems unlikely and there are no models of spiking networks that would tune those delays in the process of learning. 
 
-From a purely computational perspective, there is no difference between using discrete (Turing machines) and continuous (GPAC) models of computations \cite{BOURNEZ2007317,Bournez2008}. The significant advantage of discrete models is their close relation to many fields of logic and formal proofs. Perhaps by discretizing the brain, it might be easier to uncover the algorithm that it implements. 
+From a purely computational perspective, there is no difference between using discrete (Turing machines) and continuous (GPAC) models of computations \cite{BOURNEZ2007317,Bournez2008}. The significant advantage of discrete models is their close relation to many fields of algorithmics and logic. Perhaps by discretizing the brain, it might be easier to uncover the algorithm that it implements. 
 
 
 \subsection{Bayesian and variational inference}
@@ -1357,7 +1380,7 @@ Sparsity allows for significant performance increase. The full implementation of
 input $\boldsymbol{x}$ is array [$i$ : $x_i=1$]
 for $0 < j \le m$ do $s_j$ := $r_j$ 
 for $i$ in $\boldsymbol{x}$ do for $0 < j \le m$ do $s_j$ := $s_j+w_{ij}$
-$k$ = 0
+$k$ := 0
 for $0 < j \le m$ do if $s_j > s_k$ then $k$ := $j$
 $r_j$ := $r_j-\epsilon$
 for $i$ in $\boldsymbol{x}$ do $w_{ik}$ := $w_{ik}+\epsilon$
@@ -1459,7 +1482,7 @@ p(y_k) \approx \int_{z}p(s_k=z) \prod_{j\ne k} \big(p(s_j+u_{kj}<z|y_j)p(y_j)+p(
 \] 
 We know that $\boldsymbol{y}$ is uniquely determined by $\boldsymbol{s}$ but the formula above considers $p(y_j)$ and $p(s_k=z)$, as if $\boldsymbol{y}$, $\boldsymbol{s}$ were both random variables. The reason for this is simplification. The interactions between bits of $\boldsymbol{y}$ are too complex to express $p(y_k)$ exactly. 
 
-Let us minimize the MSE loss function
+Consider minimization of the MSE loss function
 \[
 \sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
 \]
