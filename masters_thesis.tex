@@ -1,7 +1,8 @@
-\title{Geometric theory of reinforcement learning}
-\author{Aleksander Mendoza-Drosik}
 
-\documentclass[12pt]{article}
+
+
+\documentclass[a4paper]{article}
+\usepackage[affil-it]{authblk}
 \usepackage{tikz}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -35,6 +36,8 @@
 \newcommand*\sq{\mathbin{\vcenter{\hbox{\rule{.3ex}{.3ex}}}}}
 \DeclareSIUnit{\molar}{M}
 \begin{document}
+	\title{Geometry of intelligence}
+	\author{Aleksander Mendoza-Drosik}	
 \maketitle
 \lstset{
 	basicstyle=\ttfamily,
@@ -45,6 +48,8 @@
 \begin{abstract}
 This thesis investigates the problems of sample inefficiency and catastrophic forgetting. It uses an algebraic approach to study group symmetries in reinforcement learning environments. Significant results of this thesis are (1) proof that  finitely generated groups (in continuous tasks) and monoids (in episodic tasks) are learnable in the limit, (2) a formal model of winner-takes-all binary neural networks along with proof of convergence and (3) its generalization to multiple winners. The thesis highlights interesting connections to many existing theories of mathematics (geometric deep learning, predictive coding, inductive inference, Bayesian inference, slow feature analysis) and neuroscience (Tolman's cognitive maps, place/ grid/HD cells, spiking networks). The proposed geometric theory of reinforcement learning could be seen as a framework unifying geometric deep learning, Markov decision processes and cognitive maps, potentially offering insights into solving sample inefficiency. Experimental proofs of the concept show empirical validity of the proposed framework, albeit the results remain far from being applicable to ``real world'' scenarios. 
 \end{abstract} 
+
+
 \tableofcontents
 \section{Preliminaries}
 
@@ -642,10 +647,11 @@ R(sa_1^2+sa_2)=\pi(a_2|s)R(sa_2)+\pi(a_1^2|s)(R(sa_1)+\gamma R(sa_1^2))
 \]
 The Bellman equation $v_\pi(s) = \sum_{a\in A} \pi(a|s)(R(sa)+\gamma v_\pi(sa))$ can be simplified analogically.
 
-The current deep learning approaches are naive. They treat $S$ as a decision tree $A^*$ that lacks any symmetries. What type of deep architecture are we missing, that could address this problem? Most likely no such architecture exists, for the simple reason that symmetries in the action space are dynamic, can change with the environment (e.g. humans/animals playing video games) and are usually not (fully) known a'priori (the details are discussed in section \ref{subsection:group_manifolds}). This stands in stark contrast with symmetries in the signal space, which can be given a'priori and do not need to change over time.
+The current deep learning approaches are naive. They treat $S$ as a decision tree $A^*$ that lacks any symmetries. What type of deep architecture are we missing, that could address this problem? Most likely no such architecture exists, for the simple reason that symmetries in the action space are dynamic, can change with the environment (e.g. humans/animals playing video games) and are usually not (fully) known a priori (the details are discussed in section \ref{subsection:group_manifolds}). This stands in stark contrast with symmetries in the signal space, which can be given a priori and do not need to change over time.
 
 
 \subsection{Inductive inference of groups}
+\label{subsection:inductive_inference_of_groups}
 Theory of inductive inference \cite{deLaHiguera,SOLOMONOFF19641} studies how certain unknown mechanisms can be guessed by observing their behavior, such as outputs (in case of functions) or member elements (in case of sets). The theory defines an important notion of \textit{learnability in the limit}. Traditionally, it has been focused on learning formal grammars and finite state automata by observing strings belonging to their formal languages. Let us shortly review it, before we extend this theory to groups. 
 
 Formal language $L$ over alphabet $A$ is a set of strings $L\subset A^*$. Presentation $\phi$ of a non-empty set $\mathcal{X}$ is an enumeration $\phi:\mathbb{N}\rightarrow \mathcal{X}$ of all its elements $\phi(\mathbb{N})=\mathcal{X}$. We refer to $\phi$ as \textit{text} when $X=A^*$ and as \textit{informant} when $X=A^*\times \{0,1\}$. Let $\mathcal{L}$ be a class of languages.
@@ -677,7 +683,7 @@ The correct presentation of $S$ could be inferred with even a few examples (depe
 It is worthwhile to compare the efficiency of this method with temporal difference learning, which requires multiple passes over the same state to converge. Searching through Cayley graph of $S$ can be used to quickly find shortest route to desired destination with some reward, but this may not necessarily be the route that maximizes cumulative reward (more on that later). Inference of groups could hold the key to transfer learning, as many environments with different reward landscapes could share the same underlying group structures. 
 
 \subsubsection{Inductive inference of monoids}
-
+\label{subsection:inductive_inference_of_monoids}
 Inference of groups corresponds to continuous reinforcement learning tasks because $\phi$ represents a single infinite walk over $S$.
 Finitely presented monoids such trajectories do not exist in the general case. Consider for example the free commutative monoid $\langle l,r | lr=rl \rangle$. It is impossible to visit any state twice, nor it is possible to find any walk $\phi$ that would be surjective $\phi(\mathbb{N})=S\times A$. For this reason $\phi$ must be sampled with restarting, as in episodic reinforcement learning tasks. Let $\emptyset\notin A$ denote a special action whose occurrence $\phi(t)=(s,\emptyset)$ signals end of current episode and beginning of a new one, starting in $\phi(t+1)=(e,a)$. By convention neutral element $e$ is the initial state.
 
@@ -688,6 +694,92 @@ $\mathcal{A}$ proceeds as follows. Define $n \in \mathbb{N}$, $S_{<n}$ and $R_{s
 The proof of learning in the limit is analogical as before.
 It only remains to highlight that coset enumeration can no longer be applied to monoids and a different planning method needs to be devised.
 
+\iffalse
+\subsection{On inference of cosets}
+Let $S$ be a group of size $n\in \mathbb{N}$. Let $m$ be some number. The task is to find subgroup $G$ of index $[S:G]=m$ (we assume such $G$ exists). To achieve this, we need to find partition $\mathcal{C}=(C_1,C_2,...C_m)$ of $G$ 
+\[
+C_1\cup C_2\cup ... \cup C_m = S
+\]
+\[
+C_i \cap C_j = \emptyset \text{ for all }i \ne j
+\]
+such that all partition classes $C_i$ have the same size
+\[
+|C_i|= \frac{n}{m}\text{ for all }1\ge i\ge m
+\]
+Partition classes are (right) cosets if and only if
+\[
+C_ia \in \mathcal{C} \text{ for all }C_i \in \mathcal{C} , a\in S
+\]
+where
+\[
+C_ia=\{sa : s\in C_i\}
+\]
+Such partition can be found by brute force approach. We seek a more efficient algorithm, which in later sections will be used to derive models of neural networks capable of learning groups embedded in Markov decision processes.
+
+We defined $\mathcal{C}$ as an ordered tuple, rather than an unordered set. 
+We use this ordering to define distance $d(\mathcal{C},\mathcal{C}')$ between two partitions as the number of mismatched elements \[
+d(\mathcal{C},\mathcal{C}') = \sum_{1 \le i \le m} |C_i - C_i'|
+\]
+where $-$ denotes difference of sets. Note that 
+\[|C_i - C_i'| = \frac{n}{m} - |C_i \cap C_i'| =  |C_i' - C_i|\]
+It is impossible to have $d(\mathcal{C},\mathcal{C}')=1$. Let 
+$\mathcal{C}[s/z]$ denote the operation of swapping $s,z\in S$  \[
+s\in C_i \in \mathcal{C} \wedge z\in C_j \in \mathcal{C} \iff z\in C'_i \in  \mathcal{C}[s/z] \wedge s\in C'_j \in \mathcal{C}[s/z]
+\]
+where $\mathcal{C}[s/z]=(C'_1,C'_2,...,C'_m)$. Important properties are
+\[
+\mathcal{C}[s/z]=\mathcal{C}[z/s]
+\]
+\[
+\mathcal{C}[s/z][s/z]=\mathcal{C}
+\]
+Let $\mathcal{C} \xleftrightarrow{x} \mathcal{C}'$ denote that $\mathcal{C}$ can be transformed into $\mathcal{C}'$ in with minimum of $x$ swaps. If $\mathcal{C}\ne \mathcal{C}'$ then
+\[
+\mathcal{C} \xleftrightarrow{x-1} \mathcal{C}' \iff d(\mathcal{C},\mathcal{C}')=x
+\]
+Let $\alpha_\mathcal{C}: 2^{G} \rightarrow \mathbb{N}^m$ be a function that maps every subset $Z \subset S$ to a ``frequency'' vector $\boldsymbol{v}=\alpha_\mathcal{C}(Z)$ such that $v_i=|Z \cap C_i|$ where $\boldsymbol{v}=[v_1,v_2,...,v_m]$.  For all $C_i \in \mathcal{C}$ the vector $\alpha_{\mathcal{C}}(C_i)$  is zero everywhere except at $v_i=\frac{n}{m}$. The sum of all entries equals the set cardinality \[
+\lVert \alpha_\mathcal{C}(Z) \rVert_1=\sum_{i}v_i = |Z|
+\]
+The sum of squares can take values between $|Z|$ and $|Z|^2$ \[
+|Z| \le \lVert \alpha_\mathcal{C}(Z) \rVert_2^2= \alpha_\mathcal{C}(Z) \alpha_\mathcal{C}(Z)^T =\sum_{i}v_i^2 \le |Z|^2
+\]
+For all subsets of size $|Z|=\frac{n}{m}$ the sum of squares $ \lVert \alpha_\mathcal{C}(Z) \rVert_2^2$ equals its maximum value $(\frac{n}{m})^2$ if and only if $Z\in \mathcal{C}$. 
+If $\mathcal{C}$ are cosets then $\lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2=(\frac{n}{m})^2$ for all $a \in S$, $C_i\in \mathcal{C}$. We can define fitness function $F(\mathcal{C})=\sum_i \lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2$ that measures how far $\mathcal{C}$ is from being a set of cosets. 
+
+
+Suppose $S$ is a random variable with distribution $p(s)$. Thus, we can define \[
+p(C_i) = \sum{s\in C_i} p(s)
+\]
+\[
+p(s|C_i) = \begin{cases*}
+	\frac{p(s)}{p(C_i)} & \text{if $s\in C_i$} \\
+	0 & \text{otherwise}
+\end{cases*}
+\]
+\[
+p(s'|C_i,a) = p(s'a^{-1}|C_i) \text{ for all }s',a\in S
+\]
+\[
+p(C_j|C_i,a) = \sum_{s' \in C_j} p(s'|C_i,a)\text{ for all }a\in S
+\]
+The equations can be rewritten to
+\[
+p(s'|C_i,a) = \sum_{C_j\in \mathcal{C}} p(s'|C_j)p(C_j|C_i,a)
+\]
+which is a predictive model (an agent) of the environment $S$ with $\mathcal{C}$ as latent variables (in a hidden layer) acted upon by $a$ (agent actions). 
+If $\mathcal{C}$ are cosets then $C_ia\in \mathcal{C}$ and $p(C_ia|C_i,a)=1$, hence, the model simplifies to $p(s'|C_i,a)=p(s'|C_ia)$.
+
+If $\mathcal{C}$ are cosets and $\omega$ is a permutation on $m$ numbers then $(C_{\omega 1},...,C_{\omega m})$ are costets too. Let $\mathcal{G}_m$ be the set of all subgroups $G<S$ of index $[S:G]=m$. Let $\mathcal{C}_*$ be the set of all  partitions $\mathcal{C}$ that are cosets. There are $m!$ possible permutations $\omega$, therefore, $|\mathcal{C}_*|=|\mathcal{G}_m| m!$. 
+
+The squared probability $p(s'|C_i,a)^2$ can be used to measure ``fitness'' of partition $\mathcal{C}$ \[
+\mathbb{E}[p(s'|C_i,a)|C_i,a] = \sum_{s} p(sa|C_i,a)p(s|C_i) = 
+\]
+If $\mathcal{C} \in \mathcal{C}_*$ and $p(s)$ is uniform then $p(s'|C_i,a)=p(s'|C_ia)=\frac{1}{m}$, which maximizes expectation \[
+\mathbb{E}[p(s'|C_i,a)|C_i,a]=
+\]
+Let $\mathcal{C}=(C_1,...,C_m)$ and $\mathcal{C}'=(C_1',...,C_m')$. 
+\fi
 
 
 \subsection{Monoids embedded in Markov decision processes}
@@ -759,7 +851,8 @@ The biological brain is good at building cognitive maps, which encode many geome
 
 
 
-\subsection{Learning embedded monoids}
+\subsection{Learning monoids embedded in MDP}
+\label{subsection:learning_embedded_monoids}
 Define words $w_1,w_2\in A^*$ to be \textit{positively consistent} in some subset $H\subset S$ if for all $s\in H$ the equality $sw_1=sw_2$ holds. Similarly define them to be \textit{negatively consistent} if for all $s\in H$ the inequality $sw_1\ne sw_2$ holds. The two words are \textit{consistent} if they are either positively or negatively consistent. Otherwise they are \textit{inconsistent}.
 Define two states $s,s'\in S$ to be \textit{indistinguishable} with radius $r$ if all the words $w_1,w_2\in A^{\le r}$ are consistent in $H=\{s,s'\}$. Let 
 $\psi(s,s')=r$ be the largest $r$ (possibly $\infty$) such that the two states are indistinguishable
@@ -787,9 +880,84 @@ The function is well defined on $HA^{\le r}$ because for $h\in H, w_1,w_2\in A^{
 \[
 f(h)w_1=f(h)w_2 \iff w_1=w_2\in R_{s}^{(r)} \iff hw_1=hw_2 
 \]
-by definition of indistinguishability. Therefore, $f$ is a subhomomorphism from $H$ to $G_{s}^{(r)}$. For any $H$-path $sw=h$ we have $f(s)w=f(sw)$ by induction on $w$. Let $Z$ be a set of states such that $HA^{\le r}\subset Z$ and $zw_1=zw_2\iff w_1=w_2 R_{s}^{(r)}$ for $w_1,w_2\in A^{\le r}$. By assumption, for all $a\in A$  there exist $s'\in H_{s}^{(r)}$ such that $s'a\in H_{s}^{(r)}$. Therefore, when defining $Z$ if there exists $z\in H\subset Z$ such that $za\notin H$, we can be sure it is possible to add new states to $Z$ so that $za$ is indistinguishable from $z$ (this can be stated more formally by expressing $Z$ as an inductive construction of Cayley graph of $G_{s}^{(r)}$). Continue this inductive definition until $za\in Z$ for all $z\in Z,a\in A$. Let $g:Z\rightarrow G_{s}^{(r)}$ defined by $g(s)=e$ and $g(zw)=g(z)w$ for all $z\in Z,w\in A^{\le r}$. Therefore $g$ is a subhomomorphism from $Z$ to $G_{s}^{(r)}$. Every path in $Z$ is a $Z-path$ and all its states are indistinguishable, therefore $g(zw)=g(z)w$ for all $z\in Z,w\in A^*$. Thus, $g$ is homomorphism from $Z$ to $G_{s}^{(r)}$. By definition of $R_{s}^{(r)}$, two states are equal $zw_1=zw_2$ if and only if $g(z)w_1=g(z)w_2$. Hence, $Z$ and $G_{s}^{(r)}$ are isomorphic. Because $H$ is a subset of $Z$, $H$ must be subisomorphic to $G_{s}^{(r)}$. End of proof. 
+by definition of indistinguishability. Therefore, $f$ is a subhomomorphism from $H$ to $G_{s}^{(r)}$. For any $H$-path $sw=h$ we have $f(s)w=f(sw)$ by induction on $w$. Let $Z$ be a set of states such that $HA^{\le r}\subset Z$ and $zw_1=zw_2\iff w_1=w_2 R_{s}^{(r)}$ for $w_1,w_2\in A^{\le r}$. By assumption, for all $a\in A$  there exist $s'\in H_{s}^{(r)}$ such that $s'a\in H_{s}^{(r)}$. Therefore, when defining $Z$ if there exists $z\in H\subset Z$ such that $za\notin H$, we can be sure it is possible to add new states to $Z$ so that $za$ is indistinguishable from $z$ (this has yet to be reformulated more rigorously). Continue this inductive definition until $za\in Z$ for all $z\in Z,a\in A$. Let $g:Z\rightarrow G_{s}^{(r)}$ defined by $g(s)=e$ and $g(zw)=g(z)w$ for all $z\in Z,w\in A^{\le r}$. Therefore $g$ is a subhomomorphism from $Z$ to $G_{s}^{(r)}$. Every path in $Z$ is a $Z-path$ and all its states are indistinguishable, therefore $g(zw)=g(z)w$ for all $z\in Z,w\in A^*$. Thus, $g$ is homomorphism from $Z$ to $G_{s}^{(r)}$. By definition of $R_{s}^{(r)}$, two states are equal $zw_1=zw_2$ if and only if $g(z)w_1=g(z)w_2$. Hence, $Z$ and $G_{s}^{(r)}$ are isomorphic. Because $H$ is a subset of $Z$, $H$ must be subisomorphic to $G_{s}^{(r)}$. End of proof. 
 
 Learning monoids embedded in $S$ can be achieved by iteratively for $r=1,2...$ partitioning $S$ into $H_{s}^{(r)}$ and checking whether all actions $a\in A$ are observed $ha=h'$ for some $h,h'\in H_{s}^{(r)}$.
+
+\iffalse
+\subsection{Learning quotients of monoids embedded in MDP}
+
+In the previous subsection \ref{subsection:learning_embedded_monoids} we investigated how to find subisomorphisms. All of the algorithms discussed so far (subsections \ref{subsection:inductive_inference_of_groups}, \ref{subsection:inductive_inference_of_monoids}, \ref{subsection:learning_embedded_monoids}) were purely mathematical arguments of little practical value (as they often involved enumerating all possible words or relations of a certain length). In this subsection let us propose a stochastic algorithm that could be ``realistically'' applied to identifying subhomomorphisms.
+
+
+An equivalence relation $\sim$ on a monoid $G$ is called \textit{congruence} if
+\[
+x\sim y\text{ and } a \sim b \implies xa\sim yb\text{ and }ax\sim by\text{ for all }x,y,a,b\in G
+\]
+If $\sim$ is a congruence then multiplication of equivalence classes $[x][a]=[xa]$ is well defined and $G/{\sim}$ is called a \textit{quotient monoid}. If an inverse exists $xx^{-1}=e$ and $x\sim e$ then $x^{-1} \sim e$. Hence, if $G$ is a group then $[e]$ is a normal subgroup and equivalence classes are cosets. 
+
+Let $H$ be a finite subset of $S$ of size $|H|=n$. Assume all trajectories $\phi(t)=(S_t,A_t)$ sampled by the agent are $H$-paths. Let $G/{\sim}$ be an unknown finite monoid of size $|G/{\sim}|\le m$. Relation $\sim$ is unknown. Define feedforward weights $W:\mathbb{R}^{n\times m}$ ($n$ rows, $m$ columns) and recurrent weights $U_a:\mathbb{R}^{m\times m}$ for each $a\in A$. Let us identify $H$ with space of binary vectors $\{0,1\}^n$ such that every $h\in H$ has a corresponding one-hot row vector $\boldsymbol{h}\in \{0,1\}^n$. Analogically every $g\in G/{\sim}$ has a one-hot row vector $\boldsymbol{g}\in \{0,1\}^m$.
+
+Let $w_{hg}$ denote the element of $W$ at $h$-th row and $g$-th column, defined as $w_{hg}=\boldsymbol{h}W\boldsymbol{g}^T$. At any time $t$ agent occupies some state $S_t\in H$ and tries to guess the corresponding monoid element $G_t \in G/{\sim}$.
+Let us use $W$ to model probabilities \[
+q(S_t{=}h|G_t{=}g)=w_{hg}
+\]
+Therefore columns of $W$ must sum up to $1$.
+Given current state $S_t\in H$ and corresponding monoid element $G_t \in G/{\sim}$ the task of $U$ is to predict the next $G_{t+1}$ as
+\[
+q(G_{t+1}{=}g'|G_t{=}g,A_t{=}a) = u_{g'ga}
+\] 
+where $u_{g'ga}=\boldsymbol{g} U_{a} \boldsymbol{g'}^T$.
+Agent does not know the state transition function and has to  model its environment probabilistically as
+\begin{align*}
+& q(S_{t+1}{=}h'|S_t{=}h, A_t{=}a) \\
+&=\sum_{g',g}  q(S_{t+1}{=}h'|G_{t+1}{=}g') q(G_{t+1}{=}g'|G_t{=}g,A_t{=}a)q(G_t{=}g|S_t{=}h)	\\
+&= \sum_{g,g'}w_{h'g'}u_{g'ga}q(G_t{=}g|S_t{=}h)
+\end{align*}
+where $q(G_t{=}g|S_t{=}h)$ can be estimated by integrating the true probabilities $p(G_t{=}g)$ and $p(S_t{=}h)$ 
+\[
+q(G_t{=}g|S_t{=}h) = \frac{q(S_t{=}h|G_t{=}g)p(G_t{=}g)}{p(S_t{=}h)} = \frac{w_{hg}p(G_t{=}g)}{p(S_t{=}h)}
+\]
+The agent can access the true distribution $p(S_t)$ only by sampling random walks $\phi$ (and $G_t$ is decided by agent a posteriori). 
+Let $\mathcal{L}(W,U)$ be the fitness function
+\[
+\mathcal{L}(W,U) = \mathbb{E}_{(h,a)\in\phi}[q(S_{t+1}{=}ha|S_t{=}h, A_t{=}a)]
+\]
+By maximizing $\mathcal{L}(W,U)$, we maximize the expected probability of the correct next state $S_{t+1}=ha$. If we knew the exact subhomomorphism $f:S\rightarrow G/{\sim}$ then $p(G_t{=}g)$ would be the probability of visiting any state $h$ such that $f(h)=g$
+\[
+p(G_t{=}g)=\sum_{h\in f^{-1}(g)}p(S_t{=}h)
+\]
+Let us narrow down the search space for $f$ and assume maximal entropy (see \ref{paragraph:entropy_maximization}) of $p(G_t{=}g)$, that is, the distribution $p(G_t{=}g)=\frac{1}{m}$ is uniform for all $g$. Then $q(S_{t+1}{=}h'|S_t{=}h, A_t{=}a)$ simplifies to
+\[
+q(S_{t+1}{=}h'|S_t{=}h, A_t{=}a)=\frac{1}{mp(S_t{=}h)}\sum_{g,g'}w_{h'g'}u_{g'ga}w_{hg}
+\]
+We could justify this bias by arguing that if $G$ was a group, then its cosets $g$ would be of equal size and cover the state space ``evenly''. The model $q$ naively assumes that
+\[
+q(S_{t+1}{=}h',S_t{=}h|G_t{=}g,A_t{=}a)=w_{hg} \sum_{g'}w_{h'g'}u_{g'ga}
+\]
+Maximization of $\mathcal{L}(W,U)$ could be restated as the problem of maximizing $\mathbb{E}_{(h,a)\in\phi}[q(S_{t+1}{=}ha,S_t{=}h|G_t,A_t{=}a)]$ under constraint of uniform $p(G_t)$.
+Function $f$ defines a partition of state space $H$. The problem of finding $f$ could be posed as the problem of clustering $n$ states $h\in H$ into $m$ partition classes $g\in G/{\sim}$ (compare with subsection \ref{subsection:partitioning_p}). 
+As $f$ is unknown, let us generalize and consider $c:S\rightarrow G/{\sim}$ to be any function. Let $C_g=c^{-1}(g)$ be the equivalence classes induced by preimages of $c$. Assume agent knows $c$ and uses it to compute $G_t$ after observing $S_t$. Consider
+\begin{align*}
+&q(S_{t+1}{\in}C_{g'},S_t{\in}C_g |G_t{=}g,A_t{=}a) \\
+&=q(S_t{\in} C_g|G_t{=}g)\sum_{g'}q(S_{t+1}{\in}C_{g'}|G_{t+1}{=}g')u_{g'ga}	
+\end{align*}
+where \[
+q(S_t\in C_g|G_t{=}g) = \sum_{h\in C_g}q(S_t{=}h|G_t{=}g)
+\]
+Suppose $W$ is fixed and we wish to find $U$ that maximizes the expectation
+\[
+\mathbb{E}_{(h,a)\in \phi}[q(S_{t+1}{=}ha{\in}C_{g'},S_t{=}h{\in}C_g |G_t{=}g,A_t{=}a)]
+\]
+
+Agent does not know $f$ a priori but it can use maximum likelihood estimation\[
+f_{ML}(h)=\argmax_{g}p(S_t=h|G_t=g) = \argmax_g w_{hg}
+\]
+Let $[g] = f^{-1}_{ML}(g)$ be the equivalence classes on $H$. 
+\[
+p(S_{t+1}\in[g'],S_t\in[g]|G_t=g,A_t=a)
+\]
+\fi
 
 \subsection{Reducing reward maximization to a graph search}
 
@@ -896,7 +1064,7 @@ This forms the basis of variational inference \cite{var_inf}. It is the foundati
 The above product holds true under the assumption that all variables are independent. \textit{Graphical models} can be used to further introduce conditional dependencies. 
 
 \subsection{Partitioning $p$ into mutually exclusive classes}
-
+\label{subsection:partitioning_p}
 I  propose an algorithm called \textit{exclusive coincidence classes} (ECC), which takes a shortcut and models the marginal distribution directly.
 Instead of assuming that $y_j$ are mutually independent, let us assume that they are mutually exclusive, meaning that only one of them can be true at the same time. This imposes the restriction that all $y_j$ must be binary random variables $y_j\in\{0,1\}$, and $\boldsymbol{y} \in \mathcal{Y} = \{0,1\}^m$ is a one-hot binary vector. To stay consistent, let the observations $\boldsymbol{x}\in \mathcal{X} = \{0,1\}^n$ be a binary vector as well, but not necessarily one-hot. A key assumption is that to every observation $\boldsymbol{x}$ corresponds exactly one explanation $y_j$ (formally the space $\mathcal{X}$ is partitioned into $m$ classes), therefore we write $p(\boldsymbol{x}|y_j)$ as a short notation for $p(\boldsymbol{x}|\boldsymbol{y})$ where $y_j$ is true.
 
@@ -962,7 +1130,7 @@ In order to gain some intuition, let us consider the following example. Image ob
 \subsection{The theoretical framework}
 We presented an intuitive overview of ECC networks. This section is devoted to a fully rigorous treatment.
 
-\paragraph{Binary vector subsets and their overlap probabilities} 
+\subsubsection{Binary vector subsets and their overlap probabilities} 
 
 We define cardinality $\lVert\boldsymbol{x}\rVert_1$ as the number of $1$ bits in a given binary vector $\boldsymbol{x}$.
 
@@ -979,7 +1147,7 @@ The probability of random $\boldsymbol{x}'$ being a subset of $\boldsymbol{x}$ i
 \[p(\boldsymbol{x}'\subset\boldsymbol{x})=\frac{2^{\lVert\boldsymbol{x}\rVert_1}}{\binom{n}{\lVert\boldsymbol{x}\rVert_1}}\]
 Both of those probabilities decrease factorially quickly with length $n$. For very sparse vectors, the chance of accidental overlap is almost zero. 
 
-\paragraph{Formal definition of (first-order) ECC network}
+\subsubsection{Formal definition of (first-order) ECC network}
 Let us formally define ECC as a tuple $(Q,D_W,u,C,\boldsymbol{a})$. Matrix $Q\in \mathbb{R}^{n\times m}$ stores values of $q(x_i|y_j)$. Set $D_W$ specifies the domain of scalar values for some weight matrix $W\in D_W^{n \times m}$. Constant $u$ defines some norm $\ell_u$.  Vector $\boldsymbol{a}$ imposes length constraint on $\lVert W_j \rVert_u=a_j$ where $W_j\in D_W^n$ is the $j^{th}$ column of $W$. Set $C$ defines some partitioning (clustering) of input space $\boldsymbol{x}\in \{0,1\}^n$ into $m$ non-overlapping subsets $C(y_j) $.
 Weights $W$ are defined as
 \begin{gather*}
@@ -1007,7 +1175,7 @@ p(\boldsymbol{x}|y_j) \approx q(\boldsymbol{x}|y_j)
 First-order ECC networks model the distribution $q$ using the matrix $Q$. 
 In the case of $\ell_1$ and $\ell_2$, it is possible to compute $W_j$ using only  $Q$ and without having to model $q(\boldsymbol{x}|y_j)$ directly.
 
-\paragraph{Learning is achieved by maximizing $q(\boldsymbol{x}|y_k)$}
+\subsubsection{Learning is achieved by maximizing $q(\boldsymbol{x}|y_k)$}
 The probability $q(\boldsymbol{x})$ is modelled as
 \[
 q(\boldsymbol{x}) = \sum_{j=1}^{m} q(\boldsymbol{x}|y_j)p(y_j)
@@ -1032,7 +1200,7 @@ If $\sum_{\boldsymbol{x}\notin C(y_j)} q(\boldsymbol{x}|y_j)$ decreases across a
 \]
 Therefore, it can be seen that maximization of $\sum_{\boldsymbol{x}\in C(y_k)}q(\boldsymbol{x}|y_k)$ will push $q$ closer to $p$. This observation is fortunate, because hebbian learning rules strengthen connections to those $\boldsymbol{x}$ that cause $y_j$ to fire.
 
-\paragraph{Clustering problem measured with overlap}
+\subsubsection{Clustering problem measured with overlap}
 We can measure quality of cluster $C(y_j)$ as the expected overlap $\langle \boldsymbol{x}, \boldsymbol{x}'\rangle$ (number of $1$ bits in common) of two binary vectors  randomly drawn from the distribution $p(\boldsymbol{x}|y_j)$.
 \[
 \mathbb{E}_p(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \sum_{\boldsymbol{x},\boldsymbol{x}'\in C(y_j)} \langle \boldsymbol{x}, \boldsymbol{x}'\rangle p(\boldsymbol{x}|y_j)p(\boldsymbol{x}'|y_j)
@@ -1051,7 +1219,7 @@ Therefore, the expected value of overlap can be rewritten as
 = \sum_{i=1}^n \sum_{\boldsymbol{x},\boldsymbol{x}'\in C(y_j)}  x_i x_i'  p(\boldsymbol{x}|y_j)p(\boldsymbol{x}'|y_j) = \sum_{i=1}^n \mathbb{E}(x_i|y_j)^2 = \lVert \mathbb{E}(\boldsymbol{x}|y_j) \rVert_2^2
 \end{gather*}
 
-\paragraph{Expected overlap and $Q$ matrix} 
+\subsubsection{Expected overlap and $Q$ matrix} 
 The expected overlap can be expressed in terms of the matrix $Q$
 \[
 \mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \lVert \mathbb{E}(\boldsymbol{x}|y_j) \rVert_2^2 =  \lVert Q_j \rVert_2^2
@@ -1063,7 +1231,7 @@ or as a dot product $\boldsymbol{x}Q$
 	\mathbb{E}_q(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \mathbb{E}(\boldsymbol{x} Q_j | y_j)
 \end{gather*}
 
-\paragraph{Zero-order ECC networks}
+\subsubsection{Zero-order ECC networks}
 In the first-order ECC network, we defined weights by finding $W_j$ that maximize product $\boldsymbol{x}W_j$
 \begin{gather*}
 	W_j = \argmax_{W_j\in D_W^{n}} \mathbb{E}_p(\boldsymbol{x}W_j|y_j)\text{ where } \lVert W_j \rVert_u=a_j
@@ -1071,7 +1239,7 @@ In the first-order ECC network, we defined weights by finding $W_j$ that maximiz
 In zero-order ECC network we assume that $Q=W$. Then maximization of $\boldsymbol{x}W$ is synonymous with maximization of both $\boldsymbol{x}Q$ and $\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. 
 
 \iffalse
-\paragraph{Optimal clustering maximizes $p(\boldsymbol{x}|y_k)$} 
+\subsubsection{Optimal clustering maximizes $p(\boldsymbol{x}|y_k)$} 
 The effectiveness of neurons depends on their ability to maximize $q(\boldsymbol{x}|y_j)$ for all inputs that belong to a given cluster $\boldsymbol{x}\in C(y_j)$ and minimize $q(\boldsymbol{x}|y_j)$ for those that don't  $\boldsymbol{x}\notin C(y_k)$. In an ideal case $q(\boldsymbol{x}|y_j)$ would be $0$ for all $\boldsymbol{x}\notin C(y_j)$. 
 
 The $Q$ matrix is not capable of fitting every distribution $q(\boldsymbol{x}|y_k)$.
@@ -1088,7 +1256,7 @@ $\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. If most input
 \fi
 
 
-\paragraph{Expected value $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ maximizes $\boldsymbol{x}W_j$ under $\ell_2$ norm} 
+\subsubsection{Expected value $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ maximizes $\boldsymbol{x}W_j$ under $\ell_2$ norm} 
 
 We wish to maximize the expected value of $\boldsymbol{x}W_j$
 \[
@@ -1117,7 +1285,7 @@ It should be noted that such expected value will be skewed more towards the $\bo
 \]
 
 
-\paragraph{One-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm}
+\subsubsection{One-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm}
 We wish to maximize the expected value of $\boldsymbol{x}W_j$ 
 \[
 \mathbb{E}_{p}(\boldsymbol{x}W_j|y_j)=\sum_{\boldsymbol{x}\in C(y_j)} \boldsymbol{x} W_j p(\boldsymbol{x}|y_j) \text{ where } \lVert W_j \rVert_1=1
@@ -1128,7 +1296,7 @@ sampled according to some distribution $p(\boldsymbol{x}|y_j)$ from a given set 
 \]
 because $\mathbb{E}$ is a linear operator. The value of $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ is some real vector $\mathbb{R}^n$.  It can be observed that $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is maximized when $W_j$ is a one-hot vector with $w_{ij}=1$ for such $i$ where $p(x_i|y_j)$ is maximal. 
 
-\paragraph{Generalized $a_j$-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm}
+\subsubsection{Generalized $a_j$-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm}
 The result above can be generalized for $\lVert W_j \rVert_1 = a_j$ where $a_j$ is any positive constant, not just $1$. When $a_j=1$, then we have a guarantee that $w_{ij}\le 1$ for all $i$. Hence, our original definition of $W_j$ was a real vector $W_j\in \mathbb{R}^n$, but implicitly it was only $W_j\in [0,1]^n$. 
 
 When $a_j\ne 1$, then we must be explicit and state exactly the allowed range of values for $w_{ij}$. Let us consider a scenario where $a_j\in\mathbb{N}^+$ and $W_j\in [0,1]^n$, then the value of $W_j$ that maximizes $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is an $a_j$-hot vector with $w_{ij}=1$ for all $i$ such that $p(x_i|y_j)$ is among the top $a_j$ highest probabilities. 
@@ -1139,7 +1307,7 @@ For example, let
 $\mathbb{E}_{p}(\boldsymbol{x}|y_j) = [0.2,0.3,0.8,0.7,0.4]$ . If $a_j=3$ then maximal $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is obtained for 
 $W_j=[0,0,1,1,1]$. If $a_j=2.3$ then maximum is at $W_j=[0,0,1,1,0.3]$.
 
-\paragraph{Proof of k-means convergence for first-order networks}
+\subsubsection{Proof of k-means convergence for first-order networks}
 Start with some arbitrary $C^{(0)}$ at time step $t=0$. Given $C^{(t)}$ compute $Q^{(t)}$
 \[
 Q^{(t)}_j = \mathbb{E}_p(\boldsymbol{x}|y_j)
@@ -1165,7 +1333,7 @@ The first inequality holds because it can be rewritten as
 and we know that $W_j^{(t+1)}$ maximizes $\mathbb{E}(\boldsymbol{x}W_j^{(t+1)})$.
 The second inequality holds, because any two clusters $C^{(t)}(y_j)$ and  $C^{(t+1)}(y_j)$ will differ only when there exists some $\boldsymbol{x}\in C^{(t)}(y_j)$ such that there is some other $y_h$ for which $\boldsymbol{x}W_h \ge \boldsymbol{x} W_j$. This implies that the total sum over all clusters cannot decrease.
 
-\paragraph{Convergence is not guaranteed for zero-order networks}
+\subsubsection{Convergence is not guaranteed for zero-order networks}
 The k-means procedure for zero-order networks is almost identical as above, except that $W^{(t)}=Q^{(t)}$. The loss function becomes
 \begin{gather*}
 \mathcal{L}^{(t)} = \sum_{j=1}^m \sum_{\boldsymbol{x}\in C^{(t)}(y_j)} \boldsymbol{x} Q_j^{(t)} p(\boldsymbol{x}) = \sum_{j=1}^m p(y_j) \mathbb{E}(\boldsymbol{x} Q_j^{(t)}|y_j) = \\ 
@@ -1173,7 +1341,7 @@ The k-means procedure for zero-order networks is almost identical as above, exce
 \end{gather*}
 The previous proof no longer applies, because $Q_j$ does not maximize $\mathbb{E}(\boldsymbol{x}W_j|y_j)$. Empirical benchmarks showed that the fitness function increases and converges, but not always monotonously. 
 
-\paragraph{Convergence of $Q$ in online-learning}
+\subsubsection{Convergence of $Q$ in online-learning}
 In the proofs based on k-means algorithm, we were allowed to compute $Q$ exactly. 
 \[
 Q_j = \sum_{\boldsymbol{x}\in C(y_j)}\boldsymbol{x}p(\boldsymbol{x}|y_j)
@@ -1203,7 +1371,7 @@ for $\boldsymbol{x}$ sampled from $p(\boldsymbol{x}|y_j)$:
     $Q_j$ = $Q_j$/$\lVert Q_j \rVert_1$
 \end{lstlisting}
 
-\paragraph{Higher-order networks}
+\subsubsection{Higher-order networks}
 
 The distribution $q(\boldsymbol{x})$ is modelled as a sum
 \[
@@ -1241,7 +1409,8 @@ q(\boldsymbol{x}|y_*) = q(x_1|y_1)\big(q(x_2|y_1) +q(x_2|y_1)\big) + q(x_1|y_3)q
 \]
 More generally, a higher-order network is the union of $1,2,3...$-order networks with equality constraints of the form $q(x_{i_1}|y_{j_1})=q(x_{i_2}|y_{j_2})$. Factoring out common bits leads to equations with a tree-like nested structure of brackets. This could be used to model dendritic trees of biological neurons.
 
-\paragraph{Probability distribution of $\argmax$}
+\subsubsection{Probability distribution of $\argmax$}
+\label{paragraph:entropy_maximization}
 Let $\boldsymbol{s} \in \mathbb{R}^m$ be a vector of random variables. The probability distribution of $k = \argmax \boldsymbol{s}$ is equal to
 \[
 	p(\argmax_j s_j=k) = \int p(s_k=z)\prod_{j\ne k} p(s_j < z) dz 
@@ -1524,7 +1693,7 @@ The total number of steps is $m+m\lVert \boldsymbol{x}\rVert+m+\lVert \boldsymbo
 \subsection{Generalization of ECC networks} 
 The model introduced so far suffers from certain significant issues. Without entropy maximization the networks do not learn well, but using it defeats the purpose of out of distribution learning, as all $p(y_j)$ must become equal. From a biological perspective, ECC networks also fail to explain what would happen if a certain $y_j$ neuron was connected to two inhibitory $e_1$, $e_2$ units at once. If $y_j$  could only activate when it is the winner among both $e_1$ and $e_2$ simultaneously, then it's probability $p(y_j)$ must be significantly lower, which causes entropy maximization to collapse. This poses a significant theoretical hole  that this section seeks to fill. Perhaps it holds the key to better practical results. It is an elegant generalization of ECC networks, which also happens to be a little more biologically accurate.
 
-\paragraph{Soft winner-takes-all mechanism} 
+\subsubsection{Soft winner-takes-all mechanism} 
 Let $\boldsymbol{s}=\boldsymbol{x} W$ and $V\in \{0,1\}^{m\times m}$. 
  We say that $y_j$ is shunned by $y_k$ if and only if  $v_{kj}=1$, $y_k=1$ and $s_k>s_j$. We define $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$. The algorithm for computing full vector $\boldsymbol{y}$ is as follows
 \begin{lstlisting}
@@ -1555,12 +1724,12 @@ Let us call this algorithm \textit{hard-WTA}.
 It can be seen that multilayer convolutional ECC networks are equivalent to hard-WTA (thus, general soft-WTA does no require the network topology to be strictly arranged into layers, analogically as the real brain).
 When all entries of $V$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, which corresponds to an ECC network with a single ``inhibitory neuron''. 
 
-\paragraph{Causality models of soft- and hard-WTA}
+\subsubsection{Causality models of soft- and hard-WTA}
 In biological networks, neurons can be either inhibitory or excitatory. Spiking networks simultaneously simulate both types in continuous time, albeit differential equations of inhibitory neurons typically use a faster timescale. 
 
 In discrete-time models, we attempt to expose the causality of spikes in a more explicit form. Should the excitatory neurons $\boldsymbol{y}$ fire first, then causing inhibitory $\boldsymbol{e}$ to fire second and finally leading to lateral inhibition of slower $\boldsymbol{y}$ neurons? This is the chain of causality represented by ECC networks (fig. \ref{fig:ecc_graphical_models}). An alternative view is that excitatory $\boldsymbol{x}$ causes inhibitory $\boldsymbol{y}$ to fire and then the winning  $\boldsymbol{y}$ immediately shun slower  $\boldsymbol{y}$ via  $V$, where $v_{kj}=1$ represents inhibitory connection from $y_k$ to $y_j$. This chain of causality is represented by soft-WTA. Excitatory neurons $y_k$ could simultaneously reside in $\boldsymbol{y}$ but their entries $v_{kj}$ would be zero for all $j$.  The values of $\boldsymbol{s}=\boldsymbol{x} W$ could be interpreted as latency coding. Higher $s_j$ corresponds to higher (momentary) frequency and lower latency. 
 
-\paragraph{Sums $s_j,s_k$ represent similarity of $W_j,W_k$ weight columns}
+\subsubsection{Sums $s_j,s_k$ represent similarity of $W_j,W_k$ weight columns}
 Let $\boldsymbol{s}=\boldsymbol{x} W$. The product $s_j s_k$ is a proxy for determining
 \[
 \mathbb{E}(s_j s_k) =  \mathbb{E}(\boldsymbol{x} W_j \boldsymbol{x} W_k)=  \mathbb{E}(W_j^T \boldsymbol{x}^T  \boldsymbol{x} W_k) = W_j^T \mathbb{E}(\boldsymbol{x}^T  \boldsymbol{x}) W_k = W_j^T C W_k 
@@ -1586,7 +1755,7 @@ In the special case when bits are decorrelated $C=I$ we have
 
 
 
-\paragraph{Real-valued generalization of soft-WTA}
+\subsubsection{Real-valued generalization of soft-WTA}
 
 Consider $U \in \mathbb{R}^{m\times m}$. Suppose that $0\le s_j\le 1$, which holds if columns $W_j$ are normalized to $a_j=1$ and $\boldsymbol{s}=\boldsymbol{x} W$. 
 We say that $y_j$ is shunned by $y_k$ if  $s_j+u_{kj}<s_k$ and $y_k=1$. We define $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$. Let us refer to this as \text{real-valued soft-WTA}.
@@ -1598,10 +1767,10 @@ If we introduce matrix $V=1-U$, then real-valued soft-WTA becomes a generalizati
 In the general case, continuous values of $U$ can be adjusted independently (without $\boldsymbol{r}$) using local Hebbian rules to approximate $u_{kj}=\mathbb{E}(s_k-s_j)$,  $u_{kj}=\mathbb{E}(|s_k-s_j|)$, $u_{kj}=\mathbb{E}(s_ks_j)$. Each approach is discussed in depth below. 
 
 
-\paragraph{Soft-WTA from SFA perspective}
+\subsubsection{Soft-WTA from SFA perspective}
 Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we state that learning $U$ is the problem of minimizing ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
 
-\paragraph{Learning soft-WTA $U$ weights}
+\subsubsection{Learning soft-WTA $U$ weights}
 \iffalse
 Let us recall that the entropy maximization algorithm  is based on
 \[	
@@ -1632,7 +1801,7 @@ Empirically soft-WTA converges and produces complex patterns not only when $u_{k
 
  
 
-\paragraph{Soft-WTA with $u_{kj}=\mathbb{E}(|s_k-s_j|)$ from high-dimensional k-means perspective}
+\subsubsection{Soft-WTA with $u_{kj}=\mathbb{E}(|s_k-s_j|)$ from high-dimensional k-means perspective}
 The traditional form of k-means algorithm operates in euclidean space. It is possible to reformulate soft-WTA using $\ell_2$ distance metric. 
 
 Suppose there are several mean points $W_1,W_2,...W_m\in \mathbb{R}^n$. The ``standard'' k-means classifies new observations $\boldsymbol{x}\mathbb{R}^n$ by finding the closest mean $\argmin_j \mu(W_j,\boldsymbol{x})$ where $\mu$ is the $\ell_2$ metric. Soft-WTA allows $\boldsymbol{x}$ to match several mean points. We define that $W_j$ is shunned by $W_k$ if $\boldsymbol{x}$ matches $W_k$ and $s_j + u_{kj} < s_k$ where $s_j=\mu(W_j,\boldsymbol{x})$. We define that $\boldsymbol{x}$ matches $W_j$ if and only if there does not exist any $W_k$ that shuns $W_j$. ``Standard'' k-means is equivalent to soft-WTA with all $u_{kj}=0$.
