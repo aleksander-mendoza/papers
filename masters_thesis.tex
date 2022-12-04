@@ -1,10 +1,11 @@
 
 
+\documentclass[oneside,english,logo]{amuthesis}
 
-\documentclass[a4paper]{article}
+% Zdefiniuj kodowanie pliku źródłowego (domyślnie utf8)
+\usepackage[utf8]{inputenc}
 \usepackage[affil-it]{authblk}
 \usepackage{tikz}
-\usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{amsfonts}
@@ -27,28 +28,102 @@
 \DeclareMathOperator*{\argmax}{argmax}
 \DeclareMathOperator*{\argmin}{argmin}
 \DeclareMathOperator*{\hot}{hot}
-\newtheorem{definition}{Definition}
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{corollary}{Corollary}[theorem]
-\newtheorem{lemma}[theorem]{Lemma}
+%\newtheorem{definition}{Definition}
+%\newtheorem{theorem}{Theorem}[section]
+%\newtheorem{corollary}{Corollary}[theorem]
+%\newtheorem{lemma}[theorem]{Lemma}
 \renewcommand{\labelenumii}{\theenumii}
 \renewcommand{\theenumii}{\theenumi.\arabic{enumii}.}
 \newcommand*\sq{\mathbin{\vcenter{\hbox{\rule{.3ex}{.3ex}}}}}
 \DeclareSIUnit{\molar}{M}
+% ======================================================== %
+% Dane autora i pracy                                      %
+% ======================================================== %
+\makeatletter
+\newcommand{\chapterauthor}[1]{%
+	{\centering\vspace*{-25pt}%
+		\linespread{1.1}\large\scshape#1%
+		\par\nobreak\vspace*{35pt}}
+	\@afterheading%
+}
+\makeatother
+% --- Autor pracy
+\author{Aleksander Mendoza-Drosik}
+% --- Numer albumu
+\album{434749}
+% --- Tytuł pracy (w języku polskim i angielskim)
+\titlePL{Geometria Inteligencji}
+\titleEN{Geometry of Intelligence}
+% --- Typ pracy (inżynierska, licencjacka, magisterska)
+\type{magisterska}
+% --- Wydział (wykaz skrótów):
+% --- --- WA    --- Wydział Anglistyki
+% --- --- WB    --- Wydział Biologii
+% --- --- WCh   --- Wydział Chemii
+% --- --- WFPiK --- Wydział Filologii Polskiej i Klasycznej
+% --- --- WF    --- Wydział Fizyki
+% --- --- WH    --- Wydział Historyczny
+% --- --- WMiI  --- Wydział Matematyki i Informatyki
+% --- --- WNGiG --- Wydział Nauk Geograficznych i Geologicznych
+% --- --- WNPiD --- Wydział Nauk Politycznych i Dziennikarstwa
+% --- --- WNS   --- Wydział Nauk Społecznych
+% --- --- WN    --- Wydział Neofilologii
+% --- --- WPAK  --- Wydział Pedagogiczno-Artystyczny w Kaliszu
+% --- --- WPiA  --- Wydział Prawa i Administracji
+% --- --- WSE   --- Wydział Studiów Edukacyjnych
+% --- --- WT    --- Wydział Teologiczny
+% --- --- IKE   --- Instytut Kultury Europejskiej w Gnieźnie
+\faculty{WMiI}
+% --- Kierunek (w mianowniku)
+\field{Computer Science}
+% --- Specjalność (w formie mianownikowej)
+% --- (ustaw puste, jeśli bez specjalności)
+\specialty{Artificial Intelligence}
+% --- Promotor (w dopełniaczu)
+\supervisor{prof. Wojciech Pałubicki}
+% --- Data złożenia pracy (Miasto, miesiąc rok)
+\date{Poznań, Wrzesień 2022}
+
+% --- Płeć autora (M/K)
+\stsex{M}
+% --- Zgoda na udostępnienie pracy w czytelni (TAK/NIE)
+\stread{TAK}
+% --- Zgoda na udostępnienie pracy w zakresie ochrony (TAK/NIE)
+\stprotect{TAK}
+% --- Data podpisania oświadczenia (Miasto, data)
+\stdate{Poznań, Wrzesień 30, 2022 r.}
+
+% ======================================================== %
+% Dodatkowe pakiety wykorzystywane w pracy                 %
+% ======================================================== %
+
+
+% ======================================================== %
+% Zasadnicza część dokumentu                               %
+% ======================================================== %
+
 \begin{document}
-	\title{Geometry of intelligence}
-	\author{Aleksander Mendoza-Drosik}	
 \maketitle
+
+%\makestatement
+
 \lstset{
 	basicstyle=\ttfamily,
 	mathescape
 }
 
 
-\begin{abstract}
-This thesis investigates the problems of sample inefficiency and catastrophic forgetting. It uses an algebraic approach to study group symmetries in reinforcement learning environments. Significant results of this thesis are (1) proof that  finitely generated groups (in continuous tasks) and monoids (in episodic tasks) are learnable in the limit, (2) a formal model of winner-takes-all binary neural networks along with proof of convergence and (3) its generalization to multiple winners. The thesis highlights interesting connections to many existing theories of mathematics (geometric deep learning, predictive coding, inductive inference, Bayesian inference, slow feature analysis) and neuroscience (Tolman's cognitive maps, place/ grid/HD cells, spiking networks). The proposed geometric theory of reinforcement learning could be seen as a framework unifying geometric deep learning, Markov decision processes and cognitive maps, potentially offering insights into solving sample inefficiency. Experimental proofs of the concept show empirical validity of the proposed framework, albeit the results remain far from being applicable to ``real world'' scenarios. 
-\end{abstract} 
+\begin{streszczenie}
+	Niniejsza praca porusza problemy niewydajności uczenia przez wzmocnienie oraz katastroficznego zapominania. Czerpie inspiracje z neuronauki oraz matematycznych podstaw uczenia głębokiego i procesów decyzyjnych Markowa. Zaproponowana jest matematyczna teoria, która jednoczy obserwacje wymienionych dziedzin i daje nowe spojrzenie na problemy uczenia przez wzmocnienie. Na jej podstawie zaproponowany jest nowy model sieci neuronowych, którego celem jest uczenie rzadkich wektorów binarnych, reprezentacja map kognitywnych oraz formalizacja niektórych obliczeniowych aspektów biologicznych neuronów.
+	
+	\paragraph{Słowa kluczowe:} hipokamp, uczenie przez wzmocnienie, teoria prawdopodobieństwa, algebra abstrakcyjna, żadkie wektory binarne, uczenie poprzez konkurencję, neuronauka
+\end{streszczenie}
 
+\begin{abstract}
+	This thesis focuses on investigating the problems of sample inefficiency and catastrophic forgetting in reinforcement learning. It takes inspiration from neuroscience, mathematical foundations of deep learning and Markov decision processes. A new theoretical framework is proposed, which unifies all those fields and provides valuable fundamental insights to the many problems of deep reinforcement learning and beyond. Based on those arguments, a new model of neural networks is proposed, with the aim of learning sparse binary vectors, representing cognitive maps and formalising some of the computational mechanisms of biological neurons.
+	
+	\paragraph{Keywords:} hippocampus, reinforcement learning, probability theory, abstract algebra, sparse binary vectors, competitive learning, neuroscience
+\end{abstract}
 
 \tableofcontents
 \section{Preliminaries}
@@ -180,7 +255,7 @@ The neuron fires  at time $t=t^f$ if the potential reaches some threshold $u(t)=
 There are plentiful ways of defining the firing rate for biological neurons. 
 One of them is peri-stimulus-time-histogram (PSTH). An experimenter can perform many trials in vitro, stimulating the same neuron with the same current pattern several times, count the number of spikes and then calculate the average over trials. In nature, it is impossible for an animal to replay the same event in order to make such estimation, so a different alternative would be to take a large population of similarly connected neurons and then divide the number of spikes by the number of neurons. The approach that has the most similarity to SRM is to convolve the spike train $S(t)$ with some density function, and in this way approximate the instantaneous mean firing rate. 
 
-The firing rate models have been extensively used as a basis for many machine learning models, including predictive coding and deep neural networks. Nonetheless, there exists significant experimental evidence against rate-based models. A fly can react to new stimuli and change the direction of flight within 30-40ms (Rieke et al., 1997). The concept of a firing rate does not have any meaning on such a small timescale, as it is impossible to count enough spikes to make any good estimation. Temporal averaging is only possible in scenarios where the stimulus is stationary, which is rarely the case in a natural environment.
+The firing rate models have been extensively used as a basis for many machine learning models, including predictive coding and deep neural networks. Nonetheless, there exists significant experimental evidence against rate-based models. A fly can react to new stimuli and change the direction of flight within 30-40ms \cite{Rieke}. The concept of a firing rate does not have any meaning on such a small timescale, as it is impossible to count enough spikes to make any good estimation. Temporal averaging is only possible in scenarios where the stimulus is stationary, which is rarely the case in a natural environment.
 
 A much more biologically plausible candidate is the so-called \textit{temporal coding}.
 It assumes that the information is carried by relative timing of spikes. It doesn't matter how many action potentials arrive, but rather when they arrive relative to each other. In particular, we can imagine a scenario where some neuronal population is driven by an abrupt onset of stimulus. \textit{Latency code} assumes that  only the time (latency) of the first spike carries all the information. Consecutive spikes can be ignored. Within a population, one ``winning'' neuron can even cause activation of fast-spiking inhibitory interneurons, which prevent many of the slower excitatory neighbours from firing. This forms the basis of  winner-takes-all models. Instead of only limiting ourselves to a single abrupt stimulus event, the latency code can be extended to periodic input (fig. \ref{fig:phase_coding}a), driven by some background oscillation (such as brainwaves). In reality, most of the stimulus is continuous but not periodic, and several neurons often fire in a highly correlated patterns. Hence, it becomes possible to group several spikes together based on their temporal correlation and measure their latency relative to each other. This leads to the models of spike synchrony (fig. \ref{fig:phase_coding}b).
@@ -694,93 +769,6 @@ $\mathcal{A}$ proceeds as follows. Define $n \in \mathbb{N}$, $S_{<n}$ and $R_{s
 The proof of learning in the limit is analogical as before.
 It only remains to highlight that coset enumeration can no longer be applied to monoids and a different planning method needs to be devised.
 
-\iffalse
-\subsection{On inference of cosets}
-Let $S$ be a group of size $n\in \mathbb{N}$. Let $m$ be some number. The task is to find subgroup $G$ of index $[S:G]=m$ (we assume such $G$ exists). To achieve this, we need to find partition $\mathcal{C}=(C_1,C_2,...C_m)$ of $G$ 
-\[
-C_1\cup C_2\cup ... \cup C_m = S
-\]
-\[
-C_i \cap C_j = \emptyset \text{ for all }i \ne j
-\]
-such that all partition classes $C_i$ have the same size
-\[
-|C_i|= \frac{n}{m}\text{ for all }1\ge i\ge m
-\]
-Partition classes are (right) cosets if and only if
-\[
-C_ia \in \mathcal{C} \text{ for all }C_i \in \mathcal{C} , a\in S
-\]
-where
-\[
-C_ia=\{sa : s\in C_i\}
-\]
-Such partition can be found by brute force approach. We seek a more efficient algorithm, which in later sections will be used to derive models of neural networks capable of learning groups embedded in Markov decision processes.
-
-We defined $\mathcal{C}$ as an ordered tuple, rather than an unordered set. 
-We use this ordering to define distance $d(\mathcal{C},\mathcal{C}')$ between two partitions as the number of mismatched elements \[
-d(\mathcal{C},\mathcal{C}') = \sum_{1 \le i \le m} |C_i - C_i'|
-\]
-where $-$ denotes difference of sets. Note that 
-\[|C_i - C_i'| = \frac{n}{m} - |C_i \cap C_i'| =  |C_i' - C_i|\]
-It is impossible to have $d(\mathcal{C},\mathcal{C}')=1$. Let 
-$\mathcal{C}[s/z]$ denote the operation of swapping $s,z\in S$  \[
-s\in C_i \in \mathcal{C} \wedge z\in C_j \in \mathcal{C} \iff z\in C'_i \in  \mathcal{C}[s/z] \wedge s\in C'_j \in \mathcal{C}[s/z]
-\]
-where $\mathcal{C}[s/z]=(C'_1,C'_2,...,C'_m)$. Important properties are
-\[
-\mathcal{C}[s/z]=\mathcal{C}[z/s]
-\]
-\[
-\mathcal{C}[s/z][s/z]=\mathcal{C}
-\]
-Let $\mathcal{C} \xleftrightarrow{x} \mathcal{C}'$ denote that $\mathcal{C}$ can be transformed into $\mathcal{C}'$ in with minimum of $x$ swaps. If $\mathcal{C}\ne \mathcal{C}'$ then
-\[
-\mathcal{C} \xleftrightarrow{x-1} \mathcal{C}' \iff d(\mathcal{C},\mathcal{C}')=x
-\]
-Let $\alpha_\mathcal{C}: 2^{G} \rightarrow \mathbb{N}^m$ be a function that maps every subset $Z \subset S$ to a ``frequency'' vector $\boldsymbol{v}=\alpha_\mathcal{C}(Z)$ such that $v_i=|Z \cap C_i|$ where $\boldsymbol{v}=[v_1,v_2,...,v_m]$.  For all $C_i \in \mathcal{C}$ the vector $\alpha_{\mathcal{C}}(C_i)$  is zero everywhere except at $v_i=\frac{n}{m}$. The sum of all entries equals the set cardinality \[
-\lVert \alpha_\mathcal{C}(Z) \rVert_1=\sum_{i}v_i = |Z|
-\]
-The sum of squares can take values between $|Z|$ and $|Z|^2$ \[
-|Z| \le \lVert \alpha_\mathcal{C}(Z) \rVert_2^2= \alpha_\mathcal{C}(Z) \alpha_\mathcal{C}(Z)^T =\sum_{i}v_i^2 \le |Z|^2
-\]
-For all subsets of size $|Z|=\frac{n}{m}$ the sum of squares $ \lVert \alpha_\mathcal{C}(Z) \rVert_2^2$ equals its maximum value $(\frac{n}{m})^2$ if and only if $Z\in \mathcal{C}$. 
-If $\mathcal{C}$ are cosets then $\lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2=(\frac{n}{m})^2$ for all $a \in S$, $C_i\in \mathcal{C}$. We can define fitness function $F(\mathcal{C})=\sum_i \lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2$ that measures how far $\mathcal{C}$ is from being a set of cosets. 
-
-
-Suppose $S$ is a random variable with distribution $p(s)$. Thus, we can define \[
-p(C_i) = \sum{s\in C_i} p(s)
-\]
-\[
-p(s|C_i) = \begin{cases*}
-	\frac{p(s)}{p(C_i)} & \text{if $s\in C_i$} \\
-	0 & \text{otherwise}
-\end{cases*}
-\]
-\[
-p(s'|C_i,a) = p(s'a^{-1}|C_i) \text{ for all }s',a\in S
-\]
-\[
-p(C_j|C_i,a) = \sum_{s' \in C_j} p(s'|C_i,a)\text{ for all }a\in S
-\]
-The equations can be rewritten to
-\[
-p(s'|C_i,a) = \sum_{C_j\in \mathcal{C}} p(s'|C_j)p(C_j|C_i,a)
-\]
-which is a predictive model (an agent) of the environment $S$ with $\mathcal{C}$ as latent variables (in a hidden layer) acted upon by $a$ (agent actions). 
-If $\mathcal{C}$ are cosets then $C_ia\in \mathcal{C}$ and $p(C_ia|C_i,a)=1$, hence, the model simplifies to $p(s'|C_i,a)=p(s'|C_ia)$.
-
-If $\mathcal{C}$ are cosets and $\omega$ is a permutation on $m$ numbers then $(C_{\omega 1},...,C_{\omega m})$ are costets too. Let $\mathcal{G}_m$ be the set of all subgroups $G<S$ of index $[S:G]=m$. Let $\mathcal{C}_*$ be the set of all  partitions $\mathcal{C}$ that are cosets. There are $m!$ possible permutations $\omega$, therefore, $|\mathcal{C}_*|=|\mathcal{G}_m| m!$. 
-
-The squared probability $p(s'|C_i,a)^2$ can be used to measure ``fitness'' of partition $\mathcal{C}$ \[
-\mathbb{E}[p(s'|C_i,a)|C_i,a] = \sum_{s} p(sa|C_i,a)p(s|C_i) = 
-\]
-If $\mathcal{C} \in \mathcal{C}_*$ and $p(s)$ is uniform then $p(s'|C_i,a)=p(s'|C_ia)=\frac{1}{m}$, which maximizes expectation \[
-\mathbb{E}[p(s'|C_i,a)|C_i,a]=
-\]
-Let $\mathcal{C}=(C_1,...,C_m)$ and $\mathcal{C}'=(C_1',...,C_m')$. 
-\fi
-
 
 \subsection{Monoids embedded in Markov decision processes}
 \label{subsection:group_manifolds}
@@ -847,7 +835,11 @@ Furthermore, if $f(H)=G$ and every $a\in A$ has some subinverse then $G$ is a gr
 The theory, we developed so far, allows us to formulate the following important reinforcement learning task. Given a trim environment $S$ that is not a monoid (or even semigroup), find a monoid $G$ and subhomomorphism $f$ that maximizes $\mathcal{D}_f(G,S)=\mathcal{D}(G,S)$. 
 I call this the \textit{problem of general intelligence} because an agent capable of solving it could adapt to symmetries of any task in any environment without requiring ``hard-coded'' $G$-equivariant functions. From our assumptions on $S$ we know that $\mathcal{D}(G,S)$ is well-defined. 
 
+
+
 The biological brain is good at building cognitive maps, which encode many geometric properties of the world. Grid cells fire in patterns that we could interpret as cosets of 2-dimensional translation group. Place cells represent cosets of even finer granularity. Head-direction cells are cosets of rotation group. What algorithm could the brain use to solve the general intelligence problem?
+
+
 
 
 
@@ -883,6 +875,104 @@ f(h)w_1=f(h)w_2 \iff w_1=w_2\in R_{s}^{(r)} \iff hw_1=hw_2
 by definition of indistinguishability. Therefore, $f$ is a subhomomorphism from $H$ to $G_{s}^{(r)}$. For any $H$-path $sw=h$ we have $f(s)w=f(sw)$ by induction on $w$. Let $Z$ be a set of states such that $HA^{\le r}\subset Z$ and $zw_1=zw_2\iff w_1=w_2 R_{s}^{(r)}$ for $w_1,w_2\in A^{\le r}$. By assumption, for all $a\in A$  there exist $s'\in H_{s}^{(r)}$ such that $s'a\in H_{s}^{(r)}$. Therefore, when defining $Z$ if there exists $z\in H\subset Z$ such that $za\notin H$, we can be sure it is possible to add new states to $Z$ so that $za$ is indistinguishable from $z$ (this has yet to be reformulated more rigorously). Continue this inductive definition until $za\in Z$ for all $z\in Z,a\in A$. Let $g:Z\rightarrow G_{s}^{(r)}$ defined by $g(s)=e$ and $g(zw)=g(z)w$ for all $z\in Z,w\in A^{\le r}$. Therefore $g$ is a subhomomorphism from $Z$ to $G_{s}^{(r)}$. Every path in $Z$ is a $Z-path$ and all its states are indistinguishable, therefore $g(zw)=g(z)w$ for all $z\in Z,w\in A^*$. Thus, $g$ is homomorphism from $Z$ to $G_{s}^{(r)}$. By definition of $R_{s}^{(r)}$, two states are equal $zw_1=zw_2$ if and only if $g(z)w_1=g(z)w_2$. Hence, $Z$ and $G_{s}^{(r)}$ are isomorphic. Because $H$ is a subset of $Z$, $H$ must be subisomorphic to $G_{s}^{(r)}$. End of proof. 
 
 Learning monoids embedded in $S$ can be achieved by iteratively for $r=1,2...$ partitioning $S$ into $H_{s}^{(r)}$ and checking whether all actions $a\in A$ are observed $ha=h'$ for some $h,h'\in H_{s}^{(r)}$.
+
+
+\subsection{Inference of groups as autoregressive problem}
+If the agent's internal model of the world had enough representational capacity to store the entire environment $S$, inference would be merely the matter of recording all states and transitions. In practice $S$ is too large or even infinite. It could be compressed by exploiting its symmetries. We seek to ``approximate'' $S$ with a group $G$. For simplicity let us first consider learning using noiseless observations.
+
+Assume $S$ is a group of size $n\in \mathbb{N}$. Let $m$ be some number. Suppose the task is to find subgroup $G$ of index $[S:G]=m$ (we assume such $G$ exists). To achieve this, we need to find partition $\mathcal{C}=\{C_1,C_2,...C_m\}$ of $G$ 
+\[
+C_1\cup C_2\cup ... \cup C_m = S
+\]
+\[
+C_i \cap C_j = \emptyset \text{ for all }i \ne j
+\]
+such that all partition classes $C_i$ have the same size
+\[
+|C_i|= \frac{n}{m}\text{ for all }1\ge i\ge m
+\]
+Partition classes are (right) cosets if and only if
+\[
+C_ia \in \mathcal{C} \text{ for all }C_i \in \mathcal{C} , a\in S
+\]
+where
+\[
+C_ia=\{sa : s\in C_i\}
+\]
+Such partition can be found by brute force approach (which is a proof of learnability). We seek a more efficient algorithm which could generalize to noisy environments.
+
+
+Suppose $S$ is a random variable with distribution $p(s)$. Thus, we can define \[
+p(C_i) = \sum_{s\in C_i} p(s)
+\]
+\[
+p(s|C_i) = \begin{cases*}
+	\frac{p(s)}{p(C_i)} & \text{if $s\in C_i$} \\
+	0 & \text{otherwise}
+\end{cases*}
+\]
+\[
+p(s'|C_i,a) = p(s'a^{-1}|C_i) \text{ for all }s',a\in S
+\]
+\[
+p(C_j|C_i,a) = \sum_{s' \in C_j} p(s'|C_i,a)\text{ for all }a\in S
+\]
+The equations can be rewritten to
+\[
+p(s'|C_i,a) = \sum_{C_j\in \mathcal{C}} p(s'|C_j)p(C_j|C_i,a)
+\]
+In practice $p$ is not given a priori and must approximated by learning $q$
+\[
+p(s'|C_i,a) \approx q(s'|C_i,a) = \sum_{C_j\in \mathcal{C}} q(s'|C_j)q(C_j|C_i,a)
+\]
+which is a predictive model (an agent) of the environment $S$ with $\mathcal{C}$ as latent variables (in a hidden layer) acted upon by $a$ (agent actions). It can be easily extended to learning from noisy signals $x$ conditional on state $p(x|s)$.
+
+The problem of finding $q$ and $\mathcal{C}$ can be made easier by introducing biases that exploit two properties of $p$.
+If $\mathcal{C}$ were cosets then $C_ia\in \mathcal{C}$ and $p(C_ia|C_i,a)=1$, hence, we know that the true $p$ would simplify to $p(s'|C_i,a)=p(s'|C_ia)$. Moreover, cosets must have equal size. This does not imply that $p(C_i)$ must be uniform but biasing the training towards such uniformity might be beneficial regardless. This bias is introduced in later sections under the name of \textit{entropy maximization algorithm}.
+
+Inference of $q$ could be seen as a more probabilistic or information-theoretic (compression of $S$) interpretation of the ``general intelligence problem''.
+
+\iffalse
+The expectation of $q$ can be used to measure ``fitness'' of partition $\mathcal{C}$ \[
+\mathbb{E}_p[q(s'|C_i,a)|C_i,a] = \sum_{s} q(sa|C_i,a)p(s|C_i) 
+\]
+because 
+If $\mathcal{C} \in \mathcal{C}_*$ and $p(s)$ is uniform then $p(s'|C_i,a)=p(s'|C_ia)=\frac{1}{m}$, which maximizes expectation \[
+\mathbb{E}[p(s'|C_i,a)|C_i,a]=
+\]
+Let $\mathcal{C}=(C_1,...,C_m)$ and $\mathcal{C}'=(C_1',...,C_m')$. 
+
+
+We defined $\mathcal{C}$ as an ordered tuple, rather than an unordered set. 
+We use this ordering to define distance $d(\mathcal{C},\mathcal{C}')$ between two partitions as the number of mismatched elements \[
+d(\mathcal{C},\mathcal{C}') = \sum_{1 \le i \le m} |C_i - C_i'|
+\]
+where $-$ denotes difference of sets. Note that 
+\[|C_i - C_i'| = \frac{n}{m} - |C_i \cap C_i'| =  |C_i' - C_i|\]
+It is impossible to have $d(\mathcal{C},\mathcal{C}')=1$. Let 
+$\mathcal{C}[s/z]$ denote the operation of swapping $s,z\in S$  \[
+s\in C_i \in \mathcal{C} \wedge z\in C_j \in \mathcal{C} \iff z\in C'_i \in  \mathcal{C}[s/z] \wedge s\in C'_j \in \mathcal{C}[s/z]
+\]
+where $\mathcal{C}[s/z]=(C'_1,C'_2,...,C'_m)$. Important properties are
+\[
+\mathcal{C}[s/z]=\mathcal{C}[z/s]
+\]
+\[
+\mathcal{C}[s/z][s/z]=\mathcal{C}
+\]
+Let $\mathcal{C} \xleftrightarrow{x} \mathcal{C}'$ denote that $\mathcal{C}$ can be transformed into $\mathcal{C}'$ in with minimum of $x$ swaps. If $\mathcal{C}\ne \mathcal{C}'$ then
+\[
+\mathcal{C} \xleftrightarrow{x-1} \mathcal{C}' \iff d(\mathcal{C},\mathcal{C}')=x
+\]
+Let $\alpha_\mathcal{C}: 2^{G} \rightarrow \mathbb{N}^m$ be a function that maps every subset $Z \subset S$ to a ``frequency'' vector $\boldsymbol{v}=\alpha_\mathcal{C}(Z)$ such that $v_i=|Z \cap C_i|$ where $\boldsymbol{v}=[v_1,v_2,...,v_m]$.  For all $C_i \in \mathcal{C}$ the vector $\alpha_{\mathcal{C}}(C_i)$  is zero everywhere except at $v_i=\frac{n}{m}$. The sum of all entries equals the set cardinality \[
+\lVert \alpha_\mathcal{C}(Z) \rVert_1=\sum_{i}v_i = |Z|
+\]
+The sum of squares can take values between $|Z|$ and $|Z|^2$ \[
+|Z| \le \lVert \alpha_\mathcal{C}(Z) \rVert_2^2= \alpha_\mathcal{C}(Z) \alpha_\mathcal{C}(Z)^T =\sum_{i}v_i^2 \le |Z|^2
+\]
+For all subsets of size $|Z|=\frac{n}{m}$ the sum of squares $ \lVert \alpha_\mathcal{C}(Z) \rVert_2^2$ equals its maximum value $(\frac{n}{m})^2$ if and only if $Z\in \mathcal{C}$. 
+If $\mathcal{C}$ are cosets then $\lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2=(\frac{n}{m})^2$ for all $a \in S$, $C_i\in \mathcal{C}$. We can define fitness function $F(\mathcal{C})=\sum_i \lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2$ that measures how far $\mathcal{C}$ is from being a set of cosets. 
+\fi 
 
 \iffalse
 \subsection{Learning quotients of monoids embedded in MDP}
@@ -963,7 +1053,7 @@ p(S_{t+1}\in[g'],S_t\in[g]|G_t=g,A_t=a)
 
 This and the next subsection are (at the moment) less rigorous and more speculative than rest of this thesis. Nonetheless, I decided to include them, as they motivate the next section devoted to sparse neural networks (which contains rigorous proofs and experiments). 
 
-Let us generalize Markov decision processes to a continuous-time environment. The set of states $S$ is a topological space, its geometric symmetries are topological groups/monoids and the time step $t$ is a real number. We can introduce the \textit{energy function} $E$
+Let us generalize Markov decision processes to a continuous-time environment. The set of states $S$ is a metric space, its geometric symmetries are topological groups/monoids, subhomomorphism could be generalized to neighborhoods and open balls, the time step $t$ is a real number. We can introduce the \textit{energy function} $E$ as follows
 \[
 R(t) = \frac{dE(t)}{dt}
 \]
@@ -988,11 +1078,11 @@ It should be noted that temporal-difference learning of $v$ does not work well w
 
 \subsection{Representing and navigating Cayley graphs}
  
-How exactly could the decomposition of $S$ into its subgroups be achieved? It is difficult to tell decisively, which learning algorithm is the ``right'' one. Could it be slow feature analysis, deep neural networks with gradient descent, eigenvalue decomposition of successor representation matrix or something different?  At the moment, we still don't know, but perhaps we could shed some light by asking another question. What data structure do we want to learn? There are several necessary and desirable properties that the ideal data structure should have.
+How exactly could learning of symmetries in $S$ be achieved? It is difficult to tell decisively, which learning algorithm is the ``right'' one. Could it be slow feature analysis, deep neural networks with gradient descent, eigenvalue decomposition of successor representation matrix or something different?  At the moment, we still don't know, but perhaps we could shed some light by asking another question. What data structure do we want to learn? There are several necessary and desirable properties that the ideal data structure should have.
 
 Most environments (especially the natural one) do not allow the agent to replay any event. One-shot learning is necessary, because a second shot might never come.  Moreover the memories should not interfere with each other. Otherwise, learning a new fact about $S$ can cause older memories to be overwritten, which is known as \textit{catastrophic forgetting}. In summary, the data structure that we need, must allow us to build a reliable, long-lasting \textit{episodic memory} - something which current deep RL agents do not posses. Could deep networks and backpropagation achieve it? 
 
-A Cayley graph could be expressed in differentiable form as a deep network, which takes as input current state $s\in S$ and action $a\in A$, and returns the new state $sa\in S$.  Both $s$ and $a$ would need to be embedded in a real-valued vector spaces. This could pose a problem during graph search, as small error will likely accumulate with each edge traversal. Another problem would be one-shot learning. Suppose the agent observes a new transition $sa=s'$. How many backpropagation steps would be necessary to ensure that the network learns it with satisfactory accuracy (the embedding of $s'$ shouldn't be too distant from $sa$)? Last and perhaps the most serious problem is catastrophic forgetting. We can run backpropagation for as many steps as necessary until we reach the desired accuracy of embeddings, but as a side effect, we might misplace all the previously learned state embeddings. Perhaps a massive deep network, would have enough representational capacity to offset this problem, but then the graph search would require accordingly larger computational resources to evaluate such network multiple times. This would come at significant latency and power consumption. 
+A Cayley graph could be expressed in differentiable form as a deep network, which takes as input current state $s\in S$ and action $a\in A$, and returns the new state $sa\in S$.  Both $s$ and $a$ would need to be embedded in a real-valued vector spaces. This could pose a problem during graph search, as small error will likely accumulate with each edge traversal. Another problem would be one-shot learning. Suppose the agent observes a new transition $sa=s'$. How many backpropagation steps would be necessary to ensure that the network learns it with satisfactory accuracy (the embedding of $s'$ shouldn't be too distant from $sa$)? Last and perhaps the most serious problem is catastrophic forgetting. We can run backpropagation for as many steps as necessary until we reach the desired accuracy of embeddings, but as a side effect, we might misplace all the previously learned state embeddings. There are approaches based on complementary learning systems\cite{BLAKEMAN2020218} which address this issue. Perhaps a massive deep network, would have enough representational capacity to offset this problem, but then the graph search would require accordingly larger computational resources to evaluate such network multiple times during graph search. This would come at significant latency and power consumption. 
 
 
 
