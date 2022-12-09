@@ -120,7 +120,7 @@
 \end{streszczenie}
 
 \begin{abstract}
-	This thesis focuses on investigating the problems of sample inefficiency and catastrophic forgetting in reinforcement learning. It takes inspiration from neuroscience, mathematical foundations of deep learning and Markov decision processes. A new theoretical framework is proposed, which unifies all those fields and provides valuable fundamental insights to the many problems of deep reinforcement learning and beyond. Based on those arguments, a new model of neural networks is proposed, with the aim of learning sparse binary vectors, representing cognitive maps and formalising some of the computational mechanisms of biological neurons.
+	This thesis focuses on investigating the problems of sample inefficiency and catastrophic forgetting in reinforcement learning. It takes inspiration from neuroscience, mathematical foundations of deep learning and Markov decision processes. A new theoretical framework is proposed, which unifies all those fields and provides valuable fundamental insights to the many problems of deep reinforcement learning and beyond. Based on those arguments, a new model of neural networks is proposed, with the aim of learning sparse binary vectors, representing cognitive maps and formalizing some of the computational mechanisms of biological neurons.
 	
 	\paragraph{Keywords:} hippocampus, reinforcement learning, probability theory, abstract algebra, sparse binary vectors, competitive learning, neuroscience
 \end{abstract}
@@ -921,14 +921,31 @@ The equations can be rewritten to
 \[
 p(s'|C_i,a) = \sum_{C_j\in \mathcal{C}} p(s'|C_j)p(C_j|C_i,a)
 \]
-In practice $p$ is not given a priori and must approximated by learning $q$
+An autoregressive model is then obtained as
+\[
+p(s'|s,a) = \sum_{C_i\in \mathcal{C}} p(s'|C_i,a)p(C_i|s) 
+\]
+In practice $p$ is not given a priori and must be approximated by learning $q$
 \[
 p(s'|C_i,a) \approx q(s'|C_i,a) = \sum_{C_j\in \mathcal{C}} q(s'|C_j)q(C_j|C_i,a)
 \]
-which is a predictive model (an agent) of the environment $S$ with $\mathcal{C}$ as latent variables (in a hidden layer) acted upon by $a$ (agent actions). It can be easily extended to learning from noisy signals $x$ conditional on state $p(x|s)$.
+which is a predictive model (an agent) of the environment $S$ with $\mathcal{C}$ as latent variables (in a hidden layer) acted upon by $a$ (agent actions). It can be easily extended to learning from noisy signals $x$ conditional on state $p(x|s)$. The probabilities $q(s|C_i)$ are model parameters (learned network weights). By Bayes theorem we can obtain 
+\[
+q(C_i|s) = \frac{q(s|C_i)p(C_i)}{p(s)}
+\]
+The final autoregressive model becomes
+\[
+q(s'|s,a) = \sum_{C_i,C_j\in \mathcal{C}} q(s'|C_j)q(C_j|C_i,a) \frac{q(s|C_i)p(C_i)}{p(s)}
+\]
+where $q(C_j|C_i,a)$ are recurrent weights and $q(s|C_i)$ are feed-forward weights. The constant $p(s)$ can be moved in front of summation. If we assume that $p(C_i)=\frac{1}{m}$ is uniform (an analogy to cosets being of equal size) then we can simplify
+\[
+q(s'|s,a) = \frac{1}{mp(s)} \sum_{C_i,C_j\in \mathcal{C}} q(s'|C_j)q(C_j|C_i,a)q(s|C_i)
+\]
 
 The problem of finding $q$ and $\mathcal{C}$ can be made easier by introducing biases that exploit two properties of $p$.
-If $\mathcal{C}$ were cosets then $C_ia\in \mathcal{C}$ and $p(C_ia|C_i,a)=1$, hence, we know that the true $p$ would simplify to $p(s'|C_i,a)=p(s'|C_ia)$. Moreover, cosets must have equal size. This does not imply that $p(C_i)$ must be uniform but biasing the training towards such uniformity might be beneficial regardless. This bias is introduced in later sections under the name of \textit{entropy maximization algorithm}.
+If $\mathcal{C}$ were cosets then $C_ia\in \mathcal{C}$ and $p(C_ia|C_i,a)=1$, hence, we know that the true $p$ would simplify to $p(s'|C_i,a)=p(s'|C_ia)$. Hence, recurrent weights $q(C_j|C_i,a)$ should be biased towards one-hot vectors In later section we will investigate sparse binary vectors in detail. 
+
+Another property of cosets is that they must have equal size. This does not imply that $p(C_i)$ must be uniform but biasing the training towards such uniformity might be beneficial regardless. This bias is introduced in later sections under the name of \textit{entropy maximization algorithm}.
 
 Inference of $q$ could be seen as a more probabilistic or information-theoretic (compression of $S$) interpretation of the ``general intelligence problem''.
 
