@@ -22,12 +22,15 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{tabularx}
 \usepackage{enumitem}
+\usepackage{algorithm}
 \usepackage{chemformula}
 \input{style.tikzstyles}
 \def\MakeUppercaseUnsupportedInPdfStrings{\scshape}
 \DeclareMathOperator*{\argmax}{argmax}
 \DeclareMathOperator*{\argmin}{argmin}
 \DeclareMathOperator*{\hot}{hot}
+\DeclareMathOperator{\swta}{swta}
+\DeclareMathOperator{\hwta}{hwta}
 %\newtheorem{definition}{Definition}
 %\newtheorem{theorem}{Theorem}[section]
 %\newtheorem{corollary}{Corollary}[theorem]
@@ -50,49 +53,8 @@
 % --- Autor pracy
 \author{Aleksander Mendoza-Drosik}
 % --- Numer albumu
-\album{434749}
 % --- Tytuł pracy (w języku polskim i angielskim)
-\titlePL{Geometria Inteligencji}
-\titleEN{Geometry of Intelligence}
-% --- Typ pracy (inżynierska, licencjacka, magisterska)
-\type{magisterska}
-% --- Wydział (wykaz skrótów):
-% --- --- WA    --- Wydział Anglistyki
-% --- --- WB    --- Wydział Biologii
-% --- --- WCh   --- Wydział Chemii
-% --- --- WFPiK --- Wydział Filologii Polskiej i Klasycznej
-% --- --- WF    --- Wydział Fizyki
-% --- --- WH    --- Wydział Historyczny
-% --- --- WMiI  --- Wydział Matematyki i Informatyki
-% --- --- WNGiG --- Wydział Nauk Geograficznych i Geologicznych
-% --- --- WNPiD --- Wydział Nauk Politycznych i Dziennikarstwa
-% --- --- WNS   --- Wydział Nauk Społecznych
-% --- --- WN    --- Wydział Neofilologii
-% --- --- WPAK  --- Wydział Pedagogiczno-Artystyczny w Kaliszu
-% --- --- WPiA  --- Wydział Prawa i Administracji
-% --- --- WSE   --- Wydział Studiów Edukacyjnych
-% --- --- WT    --- Wydział Teologiczny
-% --- --- IKE   --- Instytut Kultury Europejskiej w Gnieźnie
-\faculty{WMiI}
-% --- Kierunek (w mianowniku)
-\field{Computer Science}
-% --- Specjalność (w formie mianownikowej)
-% --- (ustaw puste, jeśli bez specjalności)
-\specialty{Artificial Intelligence}
-% --- Promotor (w dopełniaczu)
-\supervisor{prof. Wojciech Pałubicki}
-% --- Data złożenia pracy (Miasto, miesiąc rok)
-\date{Poznań, Wrzesień 2022}
-
-% --- Płeć autora (M/K)
-\stsex{M}
-% --- Zgoda na udostępnienie pracy w czytelni (TAK/NIE)
-\stread{TAK}
-% --- Zgoda na udostępnienie pracy w zakresie ochrony (TAK/NIE)
-\stprotect{TAK}
-% --- Data podpisania oświadczenia (Miasto, data)
-\stdate{Poznań, Wrzesień 30, 2022 r.}
-
+\title{Geometry of Intelligence}
 % ======================================================== %
 % Dodatkowe pakiety wykorzystywane w pracy                 %
 % ======================================================== %
@@ -113,11 +75,6 @@
 }
 
 
-\begin{streszczenie}
-	Niniejsza praca porusza problemy niewydajności uczenia przez wzmocnienie oraz katastroficznego zapominania. Czerpie inspiracje z neuronauki oraz matematycznych podstaw uczenia głębokiego i procesów decyzyjnych Markowa. Zaproponowana jest matematyczna teoria, która jednoczy obserwacje wymienionych dziedzin i daje nowe spojrzenie na problemy uczenia przez wzmocnienie. Na jej podstawie zaproponowany jest nowy model sieci neuronowych, którego celem jest uczenie rzadkich wektorów binarnych, reprezentacja map kognitywnych oraz formalizacja niektórych obliczeniowych aspektów biologicznych neuronów.
-	
-	\paragraph{Słowa kluczowe:} hipokamp, uczenie przez wzmocnienie, teoria prawdopodobieństwa, algebra abstrakcyjna, żadkie wektory binarne, uczenie poprzez konkurencję, neuronauka
-\end{streszczenie}
 
 \begin{abstract}
 	This thesis focuses on investigating the problems of sample inefficiency and catastrophic forgetting in reinforcement learning. It takes inspiration from neuroscience, mathematical foundations of deep learning and Markov decision processes. A new theoretical framework is proposed, which unifies all those fields and provides valuable fundamental insights to the many problems of deep reinforcement learning and beyond. Based on those arguments, a new model of neural networks is proposed, with the aim of learning sparse binary vectors, representing cognitive maps and formalizing some of the computational mechanisms of biological neurons.
@@ -126,7 +83,7 @@
 \end{abstract}
 
 \tableofcontents
-\section{Preliminaries}
+\chapter{Preliminaries}
 
 Modern deep neural networks have achieved a multitude of impressive feats, yet at the same time their intelligence appears to be shallow and inflexible. Perhaps the most challenging is the frontier of reinforcement learning (RL).  As it has been demonstrated in Deepmind's ablation studies \cite{rainbow_dqn}, deep RL requires absurd amounts of training data and computation power (figure \ref{fig:dqn}). This issue is often referred to as sample inefficiency.
 \begin{figure}[!htbp]
@@ -145,11 +102,11 @@ The produced results rarely generalize to novel tasks and often fail to adapt to
 \end{figure} 
 Biological brains do not suffer from these problems. In this thesis, I attempt to investigate what nature can tell us about reinforcement learning and how neuroscientific discoveries could be applied in the field of artificial intelligence. How could we solve the problems of sample inefficiency and catastrophic forgetting? Is deep learning the right tool?
 
-\subsection{Neuronal dynamics}
+\section{Neuronal dynamics}
 
 In order to understand how nature tackles the problems of reinforcement learning, first we should understand some fundamentals of neuroscience. 
 
-\subsubsection{Hodgkin-Huxley model}
+\subsection{Hodgkin-Huxley model}
 
 Like many natural phenomena, biological brains can be modelled at several levels of complexity. The smallest possible scale is microscopic - the biophysics of individual neurons. The evolution of action potential across cell membrane is well understood and can be modelled mathematically with high accuracy. In 1952, Hodgkin and Huxley \cite{hodgkin} were the first to successfully described membrane potentials using differential equations. Their model was able to perfectly fit the observed experimental data (figure \ref{fig:hodgkin_huxley_experiments}). The Hodgkin-Huxley model will serve as the basis for deriving more complex spiking neural networks - a very promising venue for finding potential future alternatives to deep nets.
 \begin{figure}[!htbp]
@@ -198,7 +155,7 @@ where $m$ describes opening of sodium channels, $h$ represents their closing and
 
 Integration of such equations allows us to simulate biological neurons with high degree of precision.
 
-\subsubsection{Leaky integrate-and-fire model}
+\subsection{Leaky integrate-and-fire model}
 
 There exist many variations of the Hodgkin-Huxley model that account for more intricate biological details such as other ions, cable properties, compartmental structure of dendritic tree and so on. Such extensions come at a certain computational cost during simulation.
 
@@ -232,7 +189,7 @@ The spikes produced by such models can be summed together to produce the spike t
 \end{figure}
 Neuroscientists have been able to reproduce all of these patterns using fire-and-integrate neurons such as AdEx or Izhikevich models.
 
-\subsubsection{Spike response model}
+\subsection{Spike response model}
 
 So far, we've modelled the evolution of membrane potential $u$ using differential equations. It is possible to take a different approach and model $u$ as a convolution of the external input current $I_{ext}$ and a voltage response function $\kappa$.
 \[
@@ -250,7 +207,7 @@ The neuron fires  at time $t=t^f$ if the potential reaches some threshold $u(t)=
 
 
 
-\subsubsection{Firing rate and temporal models}
+\subsection{Firing rate and temporal models}
 
 There are plentiful ways of defining the firing rate for biological neurons. 
 One of them is peri-stimulus-time-histogram (PSTH). An experimenter can perform many trials in vitro, stimulating the same neuron with the same current pattern several times, count the number of spikes and then calculate the average over trials. In nature, it is impossible for an animal to replay the same event in order to make such estimation, so a different alternative would be to take a large population of similarly connected neurons and then divide the number of spikes by the number of neurons. The approach that has the most similarity to SRM is to convolve the spike train $S(t)$ with some density function, and in this way approximate the instantaneous mean firing rate. 
@@ -290,12 +247,12 @@ r(t) = \frac{\int \kappa(\tau) S(t-\tau)d\tau}{\int \kappa(\tau) d\tau}
 \]
 When $r$ is high, the neuron will be more likely to fire first and inhibit others. When $r$ is low, the neuron is expected to fire late. Thus, firing rate carries a lot of information about latency of first spike and vice versa.
 
-\subsection{Geometric deep learning theory}
+\section{Geometric deep learning theory}
 
 Neuroscientific models can tell us a lot about the functioning of biological neurons, but their practical applications have been limited. As of today, deep learning remains the only tool capable of producing end results that resemble complex intelligent behaviour.
 The success of deep networks can be largely attributed to their ability of expressing algebraic symmetries in the data. This notion is studied and formalized by geometric deep learning theory \cite{geom_deep_learn}.
 
-\subsubsection{Curse of dimensionality}
+\subsection{Curse of dimensionality}
 
 Let us consider a set of \textit{i.i.d.} observed samples $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^N$ drawn from some distribution $P$ defined over domain $\mathcal{X}\times \mathcal{Y}$. We assume existence of some unknown function $f:\mathcal{X}\rightarrow\mathcal{Y}$ such that $f(x_i)=y_i$ for all $i=1...N$. Learning is defined as the problem of identifying $\tilde{f}$ from a parametric family $\mathcal{F}=\{f_{\theta\in\Theta}\}$ such that $\tilde{f}(x_i)=f(x_i)$ for all $i=1...N$. In the case of deep learning, the set of parameters $\Theta$ corresponds to network weights. The expected performance  of $\tilde{f}$ is defined as 
 \[
@@ -314,7 +271,7 @@ Suppose $f: \mathbb{R}^d\rightarrow\mathbb{R}$ is 1-Lipschitz continuous, i.e. s
 \end{figure}
 In order to identify $f$ we have to observe each one of the ``bumps''. Therefore, $N$ must grow exponentially $2^d$ with dimensionality $d$. This argument can be fully formalized using the notion of maximum discrepancy \cite{lipschitz}.
 
-\subsubsection{Geometric priors}
+\subsection{Geometric priors}
 
 If we could capture symmetries of the function $f$ and narrow down the search space $F$, learning in higher dimensions would become easier. To formalize such geometric priors, we assume that $\mathcal{X}$ is a space of signals (functions)
 \[
@@ -351,11 +308,11 @@ f(x.g) = f(x).g \text{ for all }g\in G
 Deep learning architectures give us means of expressing geometric priors by constraining network layers (functions) to being invariant or equivariant with respect to some $G$. For example the convolutional neural networks enforce shift-equivariance to 2D translations. Transformers express permutation-equivariance. LSTMs and RNNs use time-warping.
 
 
-\subsection{Reinforcement learning}
+\section{Reinforcement learning}
 
 Let us now consider  the problem of learning to interact with a dynamic environment. It is a very different scenario from the classic problem of fitting functions to a static dataset of samples. Thus, a different framework is necessary to describe such type of intelligence.
 
-\subsubsection{Markov decision processes}
+\subsection{Markov decision processes}
 
 Reinforcement learning \cite{rl_sutton} is based on the interplay between agent and environment. 
 It is mathematically formalized as a \textit{Markov decision process} (MDP).
@@ -395,7 +352,7 @@ G_t = R_{t+1}+\gamma R_{t+2}+\gamma^2 R_{t+3}+...
 \]
 The expected return is defined as the expectation of $G$ when the trajectories are sampled according to distribution $p_\pi$.
 
-\subsubsection{Bellman equations}
+\subsection{Bellman equations}
 An intelligent agent should be able to plan its actions in such a way as to receive maximal possible reward with high probability. Therefore, the goal of reinforcement learning is formulated as maximization of expected return. A policy $\pi$ that maximizes $\mathbb{E}_\pi [G]$ is called \textit{optimal} and is denoted as $\pi_*$. One technique for finding $\pi_*$ is through the use of \textit{value function} $v$, defined as 
 \[
 v_\pi(s) = \mathbb{E}_\pi [G_t|S_t=s]
@@ -440,12 +397,12 @@ After sampling enough trajectories, $V$ should converge to $v_\pi$. Then we can 
 	\label{fig:policy_iteration}
 \end{figure}
 
-\subsection{Cognitive maps and hippocampus modelling}
+\section{Cognitive maps and hippocampus modelling}
 
 The theory of Markov decision processes gives us an elegant and abstract mathematical framework that can be applied to any control task. Does it mean that the real brains use a value function and temporal-difference learning?
 
 
-\subsubsection{Tolman's experiments on rats}
+\subsection{Tolman's experiments on rats}
 
 In 1948, Edward Tolman published a collection of experiments investigating decision-making and planning in rats \cite{cog_maps_tolman}. One of them was the T-Alley Maze (fig. \ref{fig:tolman_maze}).
 \begin{figure}[!htbp]
@@ -469,7 +426,7 @@ The other group of psychologists claimed that the brain is more like a map. As t
 
 I would like to point out a striking resemblance between stimulus-response theory and the modern deep reinforcement learning algorithms such as deep Q-learning. This approach has led to many success stories (AlphaGo, AlphaStar...). Does this mean that the biological brains should also use stimulus-response framework?
 
-\subsubsection{Grid cells, place cells and the hippocampus}
+\subsection{Grid cells, place cells and the hippocampus}
 Since the formulation of the cognitive map hypothesis, neuroscience has provided us with a plethora of evidence in its favour.
 
 In 1971, John O'Keefe and Jonathan Dostrovsky performed one of the first experiments demonstrating the significance of hippocampus in spacial navigation \cite{OKEEFE1971171}. By placing electrodes in a rat's brain and measuring activity of neurons, they noticed that some of them would only fire whenever the  rat was in a specific place of the testing platform. These neurons were later termed as \textit{place cells}.
@@ -502,7 +459,7 @@ Place cells do not only code for current location, but they can also fire in seq
 From a neuroscientific perspective, the cognitive map theory looks appealing and credible. In the field of computer science we do not yet have any successful artificial agents, whose intelligence would be based on mechanisms resembling cognitive maps. We do, nonetheless, have some promising algorithms and proofs of the concept. 
 
 
-\subsubsection{Successor representation spectrum}
+\subsection{Successor representation spectrum}
 How do place and grid cells arise? Are they inborn and ``pre-wired'' by years of evolution, or is there a simple and elegant algorithm that leads to their emergence? 
 As Kimberly Stachenfeld has showed \cite{hipp_as_cog_map}, grid-like patterns can emerge when employing spectral graph theory to analyse reinforcement learning agents. 
 
@@ -541,7 +498,7 @@ Successor representation is efficient and allows us to use many tools of spectra
 	\label{fig:successor_repr_sim}
 \end{figure}
 
-\subsubsection{Slow feature analysis}
+\subsection{Slow feature analysis}
 
 Another candidate algorithm for explaining emergence of cognitive maps, is the \textit{slow feature analysis} \cite{slow_feature_analysis} (SFA). It is capable of generating grid cells, place cells, head-direction cells, simple and complex cells of V1, and so on \cite{slowness_sparseness}. To the best of my knowledge, it is the only algorithm capable of generating such a wide range of receptive fields, using nothing more than visual stimulus (agent has no direct knowledge of state $s$). 
 
@@ -595,7 +552,7 @@ By combining slowness principle with sparseness of neural activations, place, gr
 	\label{fig:sfa_place_cells}
 \end{figure}
 
-\subsubsection{Tollman-Eichenbaum Machine}
+\subsection{Tollman-Eichenbaum Machine}
 
 Deep networks trained with backpropagation are capable of producing place cells. To achieve this, a special architecture of \textit{Tollman-Eichenbaum machine} (TEM) \cite{TEM} is required. 
 
@@ -645,12 +602,12 @@ Tolman-Eichenbaum machine is a general architecture that can be applied to learn
 	\label{fig:tolman_eich_results}
 \end{figure} 
 
-\section{Geometry of reinforcement learning}
+\chapter{Geometry of reinforcement learning}
 
 The main results of this thesis are heavily reliant on all the preliminaries introduced in previous sections. Geometric deep learning provided us with a rigorous framework for explaining the success behind deep neural networks. Nearly all modalities such as computer vision, speech recognition, natural language processing, etc. could be (for the most part) considered as ``solved''. Geometric priors gave us a tool for addressing the curse of dimensionality.
 The notable outlier is the deep reinforcement learning, which has had a limited applicability in real-world scenarios. I would like to make the argument that sample inefficiency has many similarities to the curse of dimensionality. Algebraic symmetries may likely once again prove to be the key. While I cannot yet provide a functioning solution to the problem, I wish to share my insights, supported by mathematical arguments and ``proof of concept'' experiments. 
 
-\subsection{Sample inefficiency and symmetries}
+\section{Sample inefficiency and symmetries}
 
 Let us consider some monoid $S$. Suppose that $S$ is generated by some set $A \subset S$, meaning that every element $s\in S$ can be represented as a composition 
 \[
@@ -725,7 +682,7 @@ The Bellman equation $v_\pi(s) = \sum_{a\in A} \pi(a|s)(R(sa)+\gamma v_\pi(sa))$
 The current deep learning approaches are naive. They treat $S$ as a decision tree $A^*$ that lacks any symmetries. What type of deep architecture are we missing, that could address this problem? Most likely no such architecture exists, for the simple reason that symmetries in the action space are dynamic, can change with the environment (e.g. humans/animals playing video games) and are usually not (fully) known a priori (the details are discussed in section \ref{subsection:group_manifolds}). This stands in stark contrast with symmetries in the signal space, which can be given a priori and do not need to change over time.
 
 
-\subsection{Inductive inference of groups}
+\section{Inductive inference of groups}
 \label{subsection:inductive_inference_of_groups}
 Theory of inductive inference \cite{deLaHiguera,SOLOMONOFF19641} studies how certain unknown mechanisms can be guessed by observing their behavior, such as outputs (in case of functions) or member elements (in case of sets). The theory defines an important notion of \textit{learnability in the limit}. Traditionally, it has been focused on learning formal grammars and finite state automata by observing strings belonging to their formal languages. Let us shortly review it, before we extend this theory to groups. 
 
@@ -757,7 +714,7 @@ The correct presentation of $S$ could be inferred with even a few examples (depe
 
 It is worthwhile to compare the efficiency of this method with temporal difference learning, which requires multiple passes over the same state to converge. Searching through Cayley graph of $S$ can be used to quickly find shortest route to desired destination with some reward, but this may not necessarily be the route that maximizes cumulative reward (more on that later). Inference of groups could hold the key to transfer learning, as many environments with different reward landscapes could share the same underlying group structures. 
 
-\subsubsection{Inductive inference of monoids}
+\subsection{Inductive inference of monoids}
 \label{subsection:inductive_inference_of_monoids}
 Inference of groups corresponds to continuous reinforcement learning tasks because $\phi$ represents a single infinite walk over $S$.
 Finitely presented monoids such trajectories do not exist in the general case. Consider for example the free commutative monoid $\langle l,r | lr=rl \rangle$. It is impossible to visit any state twice, nor it is possible to find any walk $\phi$ that would be surjective $\phi(\mathbb{N})=S\times A$. For this reason $\phi$ must be sampled with restarting, as in episodic reinforcement learning tasks. Let $\emptyset\notin A$ denote a special action whose occurrence $\phi(t)=(s,\emptyset)$ signals end of current episode and beginning of a new one, starting in $\phi(t+1)=(e,a)$. By convention neutral element $e$ is the initial state.
@@ -770,7 +727,7 @@ The proof of learning in the limit is analogical as before.
 It only remains to highlight that coset enumeration can no longer be applied to monoids and a different planning method needs to be devised.
 
 
-\subsection{Monoids embedded in Markov decision processes}
+\section{Monoids embedded in Markov decision processes}
 \label{subsection:group_manifolds}
 For an agent moving in a large room, the state space $S$ might look like a group of two-dimensional translations... until it hits a wall. To rigorously discuss this phenomenon, consider Markov decision process with set of states $S$, actions $A$, a deterministic transition function $p:S\times A \rightarrow S$. Let us use $sa$ to denote $p(s,a)$ and by induction $((sa_1)a_2)...a_n$ is a repeated application of $p$. We can omit the brackets because concatenation of action strings is an associative operation ($A^*$ is a monoid) and if $sa_1..a_n=s'$ and $s'a_{n+1}...a_{m}=s''$ then $sa_1...a_m=s''$. We assume that the empty string $e\in A^*$ represents no action $se=s$. State $s'$ is \textit{reachable} from $s'$ if there exists $w\in A^*$ such that $sw=s'$. We say that $p$ is \textit{trim} (or \textit{ergodic}) if every state is reachable from any other. If we designate some $s_0\in S$ as the \textit{initial state} then we write $s \simeq w$ if $s_0w=s$. If $p$ is trim then $s \simeq w$ exists for all $s$.
 It might be tempting to treat $S$ as a monoid by defining $ss'=s_0ww'$ where $s\simeq w$ and $s'\simeq w'$ but such operation is not well defined as there might be two different $s\simeq w_1$, $s\simeq w_2$ that result in different $ss'$. Nonetheless, it is valid to treat $S$ as a graph because $p$ is deterministic.
@@ -843,7 +800,7 @@ The biological brain is good at building cognitive maps, which encode many geome
 
 
 
-\subsection{Learning monoids embedded in MDP}
+\section{Learning monoids embedded in MDP}
 \label{subsection:learning_embedded_monoids}
 Define words $w_1,w_2\in A^*$ to be \textit{positively consistent} in some subset $H\subset S$ if for all $s\in H$ the equality $sw_1=sw_2$ holds. Similarly define them to be \textit{negatively consistent} if for all $s\in H$ the inequality $sw_1\ne sw_2$ holds. The two words are \textit{consistent} if they are either positively or negatively consistent. Otherwise they are \textit{inconsistent}.
 Define two states $s,s'\in S$ to be \textit{indistinguishable} with radius $r$ if all the words $w_1,w_2\in A^{\le r}$ are consistent in $H=\{s,s'\}$. Let 
@@ -877,7 +834,7 @@ by definition of indistinguishability. Therefore, $f$ is a subhomomorphism from 
 Learning monoids embedded in $S$ can be achieved by iteratively for $r=1,2...$ partitioning $S$ into $H_{s}^{(r)}$ and checking whether all actions $a\in A$ are observed $ha=h'$ for some $h,h'\in H_{s}^{(r)}$.
 
 
-\subsection{Inference of groups as autoregressive problem}
+\section{Inference of groups as autoregressive problem}
 If the agent's internal model of the world had enough representational capacity to store the entire environment $S$, inference would be merely the matter of recording all states and transitions. In practice $S$ is too large or even infinite. It could be compressed by exploiting its symmetries. We seek to ``approximate'' $S$ with a group $G$. For simplicity let us first consider learning using noiseless observations.
 
 Assume $S$ is a group of size $n\in \mathbb{N}$. Let $m$ be some number. Suppose the task is to find subgroup $G$ of index $[S:G]=m$ (we assume such $G$ exists). To achieve this, we need to find partition $\mathcal{C}=\{C_1,C_2,...C_m\}$ of $G$ 
@@ -992,7 +949,7 @@ If $\mathcal{C}$ are cosets then $\lVert \alpha_\mathcal{C}(C_ia) \rVert_2^2=(\f
 \fi 
 
 \iffalse
-\subsection{Learning quotients of monoids embedded in MDP}
+\section{Learning quotients of monoids embedded in MDP}
 
 In the previous subsection \ref{subsection:learning_embedded_monoids} we investigated how to find subisomorphisms. All of the algorithms discussed so far (subsections \ref{subsection:inductive_inference_of_groups}, \ref{subsection:inductive_inference_of_monoids}, \ref{subsection:learning_embedded_monoids}) were purely mathematical arguments of little practical value (as they often involved enumerating all possible words or relations of a certain length). In this subsection let us propose a stochastic algorithm that could be ``realistically'' applied to identifying subhomomorphisms.
 
@@ -1066,7 +1023,7 @@ p(S_{t+1}\in[g'],S_t\in[g]|G_t=g,A_t=a)
 \]
 \fi
 
-\subsection{Reducing reward maximization to a graph search}
+\section{Reducing reward maximization to a graph search}
 
 This and the next subsection are (at the moment) less rigorous and more speculative than rest of this thesis. Nonetheless, I decided to include them, as they motivate the next section devoted to sparse neural networks (which contains rigorous proofs and experiments). 
 
@@ -1093,7 +1050,7 @@ It should be noted that temporal-difference learning of $v$ does not work well w
 
 
 
-\subsection{Representing and navigating Cayley graphs}
+\section{Representing and navigating Cayley graphs}
  
 How exactly could learning of symmetries in $S$ be achieved? It is difficult to tell decisively, which learning algorithm is the ``right'' one. Could it be slow feature analysis, deep neural networks with gradient descent, eigenvalue decomposition of successor representation matrix or something different?  At the moment, we still don't know, but perhaps we could shed some light by asking another question. What data structure do we want to learn? There are several necessary and desirable properties that the ideal data structure should have.
 
@@ -1108,11 +1065,11 @@ The real brain does not seem to be working in such a way. It requires very littl
 The mechanism of planning by performing parallel random walks over cognitive maps is very simple. If it was indeed true that hippocampus worked in this way, then another hypothesis would immediately come to mind. Perhaps higher cognitive functions and human-like intelligence could reuse some of the same mechanism, but at a larger scale. 
 
 
-\section{Sparse binary winner-takes-all networks}
+\chapter{Sparse binary winner-takes-all networks}
 
 The model that I wish to introduced belongs to the broad family of sparse binary networks (sometimes called neuronal assemblies). These are formal models that investigate, which properties of neurons could be discretized while preserving their functionality. It is also an important research venue, as we currently lack good learning algorithms for networks with sparse and binary activations. Such data structures would be an ideal candidate for modelling Cayley graphs. 
 
-\subsection{Discrete and continuous time}
+\section{Discrete and continuous time}
 
 Certain properties of neurons are widely accepted to be discrete. Each neuron by itself could be interpreted as a node in a graph. Integrate-and-fire model represents spikes as binary events in continuous time. Could we discretize the time as well?
 
@@ -1129,7 +1086,7 @@ Digital computers have an internal clock that synchronizes processing of CPU sub
 From a purely computational perspective, there is no difference between using discrete (Turing machines) and continuous (GPAC) models of computations \cite{BOURNEZ2007317,Bournez2008}. The significant advantage of discrete models is their close relation to many fields of algorithmics and logic. Perhaps by discretizing the brain, it might be easier to uncover the algorithm that it implements. 
 
 
-\subsection{Bayesian and variational inference}
+\section{Bayesian and variational inference}
 
 The foundation of all machine learning algorithms is the problem of estimating parameters $\theta$ for some unknown statistical model $p(x;\theta)$, based on a set of observations $x$ generated by $p(x;\theta)$.  Bayesian inference \cite{var_inf} is a process in which evidence $p(\theta)$ and observations $x$ are used to estimate posterior probability $p(x|\theta)$ where $\theta$ is treated like a random variable.
 If we are only interested in finding $\theta$ that maximizes $p(x|\theta)$,  we can use \textit{maximum likelihood} (ML) estimation
@@ -1170,7 +1127,7 @@ This forms the basis of variational inference \cite{var_inf}. It is the foundati
 \]
 The above product holds true under the assumption that all variables are independent. \textit{Graphical models} can be used to further introduce conditional dependencies. 
 
-\subsection{Partitioning $p$ into mutually exclusive classes}
+\section{Partitioning $p$ into mutually exclusive classes}
 \label{subsection:partitioning_p}
 I  propose an algorithm called \textit{exclusive coincidence classes} (ECC), which takes a shortcut and models the marginal distribution directly.
 Instead of assuming that $y_j$ are mutually independent, let us assume that they are mutually exclusive, meaning that only one of them can be true at the same time. This imposes the restriction that all $y_j$ must be binary random variables $y_j\in\{0,1\}$, and $\boldsymbol{y} \in \mathcal{Y} = \{0,1\}^m$ is a one-hot binary vector. To stay consistent, let the observations $\boldsymbol{x}\in \mathcal{X} = \{0,1\}^n$ be a binary vector as well, but not necessarily one-hot. A key assumption is that to every observation $\boldsymbol{x}$ corresponds exactly one explanation $y_j$ (formally the space $\mathcal{X}$ is partitioned into $m$ classes), therefore we write $p(\boldsymbol{x}|y_j)$ as a short notation for $p(\boldsymbol{x}|\boldsymbol{y})$ where $y_j$ is true.
@@ -1234,31 +1191,42 @@ It is possible to represent $q$ as a ``graphical model'', by introducing a speci
 
 In order to gain some intuition, let us consider the following example. Image observing a straight metal bar. As it rotates in front of your eyes, it will cast a line-shaped shadow on your retina $\boldsymbol{x}$. We might choose to treat different  rotations as distinct ``events'' and use $y_1...y_4$ to denote the angles $0^{\circ},45^{\circ},90^{\circ},135^{\circ}$ respectively. The bar cannot exist in two positions simultaneously, motivating our earlier assumption of mutual exclusivity. This stands in contrast to rate-coded models, which would instead try to assign some fractional probabilities to different explanations $y$, should the bar find itself in some intermediate position (like $20^\circ$ angle). A similar scenario is observed when looking at Rubin's vase illusion. A rate-coded model might assign 50\% probability to vase and 50\% to face classes, but ECC (and human perception) can only see one.
 
-\subsection{The theoretical framework}
+\section{ECC networks}
 We presented an intuitive overview of ECC networks. This section is devoted to a fully rigorous treatment.
 
-\subsubsection{Binary vector subsets and their overlap probabilities} 
+\begin{definition}
+\textit{Cardinality} $\lVert\boldsymbol{x}\rVert_1$ is the number of $1$ bits in a binary vector $\boldsymbol{x}$. 
+\end{definition}
+\begin{theorem}
+Some notable properties of binary vectors are
+\begin{enumerate}
+	\item There are $\binom{n}{c}$ binary vectors $\boldsymbol{x}$ of length $n$ and cardinality $\lVert\boldsymbol{x}\rVert_1=c$.
+	\item The $\ell_1$ norm induces a metric $\lVert\boldsymbol{x}-\boldsymbol{x}'\rVert_1$ on  binary vectors that measures how many bits differ in $\boldsymbol{x}$ and $\boldsymbol{x}'$.
+	\item The inner product $\langle\boldsymbol{x},\boldsymbol{x}'\rangle$ measures the number of overlapping $1$ bits. 
+	\item Fix $\boldsymbol{x}$ of cardinality $\lVert\boldsymbol{x}\rVert_1=c$. The number of all possible vectors $\boldsymbol{x}'$ of cardinality $c'$ that overlap with $\boldsymbol{x}$ in exactly $b$ bits is 
+	\[
+	\Omega_{\boldsymbol{x}}(b)=|\{x':\langle\boldsymbol{x},\boldsymbol{x}'\rangle=b\}|=\binom{c}{b}\binom{n-c}{c'-b}
+	\]
+	\item The probability that randomly chosen $\boldsymbol{x}'$ overlaps with $\boldsymbol{x}$ in at least $b$ bits is
+	\[p(\langle\boldsymbol{x},\boldsymbol{x}'\rangle\ge b | \boldsymbol{x})=\frac{\sum_{\dot{b}=b}^{c'}\Omega_{\boldsymbol{x}}(\dot{b})}{\binom{n}{c}}\]
+	\item The probability of random $\boldsymbol{x}'$ being a subset of $\boldsymbol{x}$ is
+	\[p(\boldsymbol{x}'\subset\boldsymbol{x})=\frac{2^{\lVert\boldsymbol{x}\rVert_1}}{\binom{n}{\lVert\boldsymbol{x}\rVert_1}}\]
+\end{enumerate}
+\end{theorem}
+The last two probabilities decrease factorially quickly with length $n$. For very sparse vectors, the chance of accidental overlap is almost zero. 
 
-We define cardinality $\lVert\boldsymbol{x}\rVert_1$ as the number of $1$ bits in a given binary vector $\boldsymbol{x}$.
 
-The number of all binary vectors $\boldsymbol{x}$ of length $n$ and cardinality $\lVert\boldsymbol{x}\rVert_1=b$ is
-\[\binom{n}{b}\]
-The $\ell_1$ norm induces a metric $\lVert\boldsymbol{x}-\boldsymbol{x}'\rVert_1$ on  binary vectors that measures how many bits differ in $\boldsymbol{x}$ and $\boldsymbol{x}'$. The inner product $\langle\boldsymbol{x},\boldsymbol{x}'\rangle$ measures the number of overlapping $1$ bits. 
-Given a specific $\boldsymbol{x}$, the number of all possible vectors $\boldsymbol{x}'$ that overlap with it in exactly $b$ bits is 
+\begin{definition}
+\textit{First-order ECC network} is a tuple $(Q,D_W,u,C,\boldsymbol{a})$. Matrix $Q\in \mathbb{R}^{n\times m}$ stores values of $q(x_i|y_j)$. Set $D_W$ specifies the domain of scalar values for some weight matrix $W\in D_W^{n \times m}$. Constant $u$ defines some norm $\ell_u$.  Vector $\boldsymbol{a}$ imposes length constraint on $\lVert W_j \rVert_u=a_j$ where $W_j\in D_W^n$ is the $j^{th}$ column of $W$. Set $C$ defines some partitioning (clustering) of input space $\boldsymbol{x}\in \{0,1\}^n$ into $m$ non-overlapping subsets $C(y_j) $.
+\end{definition}
+
+
+Networks seek weights $W$ that maximize the expected overlap $\boldsymbol{x}W_j$
 \[
-\Omega(b)=|\{x':\langle\boldsymbol{x},\boldsymbol{x}'\rangle=b\}|=\binom{\lVert\boldsymbol{x}\rVert_1}{b}\binom{n-\lVert\boldsymbol{x}\rVert_1}{\lVert\boldsymbol{x}'\rVert_1-b}
+W_j = \argmax_{W_j\in D_W^{n}} \mathbb{E}_p(\boldsymbol{x}W_j|y_j)\text{ where } \lVert W_j \rVert_u=a_j
 \]
-Therefore, the probability that randomly chosen $\boldsymbol{x}'$ overlaps with $\boldsymbol{x}$ in at least $b$ bits is
-\[p(\langle\boldsymbol{x},\boldsymbol{x}'\rangle\ge b )=\frac{\sum_{\dot{b}=b}^{\lVert\boldsymbol{x}'\rVert_1}\Omega(\dot{b})}{\binom{n}{\lVert\boldsymbol{x}\rVert_1}}\]
-The probability of random $\boldsymbol{x}'$ being a subset of $\boldsymbol{x}$ is
-\[p(\boldsymbol{x}'\subset\boldsymbol{x})=\frac{2^{\lVert\boldsymbol{x}\rVert_1}}{\binom{n}{\lVert\boldsymbol{x}\rVert_1}}\]
-Both of those probabilities decrease factorially quickly with length $n$. For very sparse vectors, the chance of accidental overlap is almost zero. 
-
-\subsubsection{Formal definition of (first-order) ECC network}
-Let us formally define ECC as a tuple $(Q,D_W,u,C,\boldsymbol{a})$. Matrix $Q\in \mathbb{R}^{n\times m}$ stores values of $q(x_i|y_j)$. Set $D_W$ specifies the domain of scalar values for some weight matrix $W\in D_W^{n \times m}$. Constant $u$ defines some norm $\ell_u$.  Vector $\boldsymbol{a}$ imposes length constraint on $\lVert W_j \rVert_u=a_j$ where $W_j\in D_W^n$ is the $j^{th}$ column of $W$. Set $C$ defines some partitioning (clustering) of input space $\boldsymbol{x}\in \{0,1\}^n$ into $m$ non-overlapping subsets $C(y_j) $.
-Weights $W$ are defined as
+which is conditional on a specific clustering
 \begin{gather*}
-	W_j = \argmax_{W_j\in D_W^{n}} \mathbb{E}_p(\boldsymbol{x}W_j|y_j)\text{ where } \lVert W_j \rVert_u=a_j \\
 	\mathbb{E}_p(\boldsymbol{x}W_j|y_j) = \sum_{\boldsymbol{x}\in C(y_j)}\boldsymbol{x}W_jp(\boldsymbol{x}|y_j) \\ 
 	p(\boldsymbol{x}|y_j) = \frac{p(\boldsymbol{x},y_j)}{p(y_j)} \\
 	p(y_j) =  \sum_{\boldsymbol{x}\in \{0,1\}^n}p(\boldsymbol{x},y_j)
@@ -1280,20 +1248,27 @@ The distribution $p(\boldsymbol{x}|y_j)$ is not known and the exact $W_j$ cannot
 p(\boldsymbol{x}|y_j) \approx q(\boldsymbol{x}|y_j)
 \]
 First-order ECC networks model the distribution $q$ using the matrix $Q$. 
-In the case of $\ell_1$ and $\ell_2$, it is possible to compute $W_j$ using only  $Q$ and without having to model $q(\boldsymbol{x}|y_j)$ directly.
+In the case of $\ell_1$ and $\ell_2$, it is possible to compute $W_j$ using only  $Q$ and without having to model $q(\boldsymbol{x}|y_j)$ directly (as will be shown later).
 
-\subsubsection{Learning is achieved by maximizing $q(\boldsymbol{x}|y_k)$}
 The probability $q(\boldsymbol{x})$ is modelled as
 \[
 q(\boldsymbol{x}) = \sum_{j=1}^{m} q(\boldsymbol{x}|y_j)p(y_j)
 \]
-We can find good approximation $q(\boldsymbol{x})\approx p(\boldsymbol{x})$, by ensuring that $q(\boldsymbol{x}|y_j)\approx p(\boldsymbol{x}|y_j)$. 
+Learning is achieved by maximizing $q(\boldsymbol{x}|y_k)$
+\begin{definition}
+The expected input $\mathbb{E}_p(\boldsymbol{x}|y_j)$ is the \textit{receptive field} of neuron $y_j$.
+\end{definition}
+\begin{theorem}
+Approximating $p(\boldsymbol{x})$ with the model $q(\boldsymbol{x})$ is equivalent to maximizing $q(\boldsymbol{x}|y_k)$ for $\boldsymbol{x}\in C(y_k)$. 
+\end{theorem}
+\begin{proof}
+We can find good approximation $q(\boldsymbol{x})\approx p(\boldsymbol{x})$ by ensuring that $q(\boldsymbol{x}|y_j)\approx p(\boldsymbol{x}|y_j)$. 
 \begin{gather*}
 	q(\boldsymbol{x}) \approx p(\boldsymbol{x}) \\
 	\sum_{j=1}^{m} q(\boldsymbol{x}|y_j)p(y_j) \approx \sum_{j=1}^{m} p(\boldsymbol{x}|y_j)p(y_j) \\
 	\sum_{j=1}^{m} q(\boldsymbol{x}|y_j)p(y_j)  \approx p(\boldsymbol{x}|y_k)p(y_k) \text{ where }\boldsymbol{x}\in C(y_k)
 \end{gather*}
-By subtracting $p(\boldsymbol{x}|y_k)p(y_k)$ from both sides, it implies that $ q(\boldsymbol{x}|y_j)$ should be minimized for all $j$ such that $\boldsymbol{x}\notin C(y_j)$
+If $q(\boldsymbol{x}|y_k)\approx p(\boldsymbol{x}|y_k)$ then by subtracting $p(\boldsymbol{x}|y_k)p(y_k)$ from both sides, it implies that $ q(\boldsymbol{x}|y_j)$ should be minimized for all $j$ such that $\boldsymbol{x}\notin C(y_j)$
 \[
 	\sum_{j\ne k} q(\boldsymbol{x}|y_j)p(y_j) \approx 0 
 \]
@@ -1305,13 +1280,21 @@ If $\sum_{\boldsymbol{x}\notin C(y_j)} q(\boldsymbol{x}|y_j)$ decreases across a
 \[
 \sum_{j} \sum_{\boldsymbol{x}\notin C(y_j)} q(\boldsymbol{x}|y_j) p(y_j) = \sum_{\boldsymbol{x}} \sum_{j\ne k}  q(\boldsymbol{x}|y_j) p(y_j) \text{ where }\boldsymbol{x}\in C(y_k)
 \]
-Therefore, it can be seen that maximization of $\sum_{\boldsymbol{x}\in C(y_k)}q(\boldsymbol{x}|y_k)$ will push $q$ closer to $p$. This observation is fortunate, because hebbian learning rules strengthen connections to those $\boldsymbol{x}$ that cause $y_j$ to fire.
-
-\subsubsection{Clustering problem measured with overlap}
-We can measure quality of cluster $C(y_j)$ as the expected overlap $\langle \boldsymbol{x}, \boldsymbol{x}'\rangle$ (number of $1$ bits in common) of two binary vectors  randomly drawn from the distribution $p(\boldsymbol{x}|y_j)$.
+Hence, maximization of $\sum_{\boldsymbol{x}\in C(y_k)}q(\boldsymbol{x}|y_k)$ minimizes the expression above and pushes $q$ closer to $p$.
+\end{proof}
+This observation is fortunate, because hebbian learning rules strengthen connections to those $\boldsymbol{x}$ that cause $y_j$ to fire most often. Learning the weights $W$ should be done in tandem with improving the clustering $C$.
+\begin{definition}
+The \textit{quality of cluster} $C(y_j)$ is measured as the expected overlap $\langle \boldsymbol{x}, \boldsymbol{x}'\rangle$ (number of $1$ bits in common) of two binary vectors  randomly drawn from the distribution $p(\boldsymbol{x}|y_j)$.
 \[
-\mathbb{E}_p(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \sum_{\boldsymbol{x},\boldsymbol{x}'\in C(y_j)} \langle \boldsymbol{x}, \boldsymbol{x}'\rangle p(\boldsymbol{x}|y_j)p(\boldsymbol{x}'|y_j)
+	\mathbb{E}_p(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \sum_{\boldsymbol{x},\boldsymbol{x}'\in C(y_j)} \langle \boldsymbol{x}, \boldsymbol{x}'\rangle p(\boldsymbol{x}|y_j)p(\boldsymbol{x}'|y_j)
 \]
+\end{definition}	
+
+\begin{theorem}
+Cluster quality is equivalent to the squared expectation of input bits.  
+\[\mathbb{E}_p(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \lVert \mathbb{E}(\boldsymbol{x}|y_j) \rVert_2^2\]
+\end{theorem}
+\begin{proof}
 The expectation of any two vectors overlapping in a specific bit $x_i$ is given by
 \begin{gather*}
 p(x_i|y_j) = \sum_{\substack{\boldsymbol{x}\in C(y_j)\\x_i=1}} p(\boldsymbol{x}|y_j)	= \sum_{\boldsymbol{x}\in C(y_j)} x_i p(\boldsymbol{x}|y_j)	= \mathbb{E}(x_i|y_j)\\
@@ -1325,46 +1308,27 @@ Therefore, the expected value of overlap can be rewritten as
 \mathbb{E}_p(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) =  \sum_{\boldsymbol{x},\boldsymbol{x}'\in C(y_j)} \big(\sum_{i=1}^n x_i x_i'\big)  p(\boldsymbol{x}|y_j)p(\boldsymbol{x}'|y_j) = \\
 = \sum_{i=1}^n \sum_{\boldsymbol{x},\boldsymbol{x}'\in C(y_j)}  x_i x_i'  p(\boldsymbol{x}|y_j)p(\boldsymbol{x}'|y_j) = \sum_{i=1}^n \mathbb{E}(x_i|y_j)^2 = \lVert \mathbb{E}(\boldsymbol{x}|y_j) \rVert_2^2
 \end{gather*}
+\end{proof}
 
-\subsubsection{Expected overlap and $Q$ matrix} 
-The expected overlap can be expressed in terms of the matrix $Q$
+\begin{theorem}
+The expected overlap can be expressed in terms of the matrix $Q$ as 
 \[
 \mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \lVert \mathbb{E}(\boldsymbol{x}|y_j) \rVert_2^2 =  \lVert Q_j \rVert_2^2
 \]
-or as a dot product $\boldsymbol{x}Q$
+or as expectation of the dot product $\boldsymbol{x}Q$.
+\end{theorem}
+\begin{proof}
 \begin{gather*}
 	\mathbb{E}_p(x_i x_i' | y_j) = 
 	\sum_{\substack{\boldsymbol{x}\in C(y_j) \\ x_i=1}} p(\boldsymbol{x}|y_j) \mathbb{E}(x_i'|y_j)= \mathbb{E}_p\big(x_i \mathbb{E}(x_i'|y_j) \big| y_j\big) = \mathbb{E}_p\big(x_i p(x_i|y_j) \big| y_j'\big)\\
 	\mathbb{E}_q(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \mathbb{E}(\boldsymbol{x} Q_j | y_j)
 \end{gather*}
-
-\subsubsection{Zero-order ECC networks}
-In the first-order ECC network, we defined weights by finding $W_j$ that maximize product $\boldsymbol{x}W_j$
-\begin{gather*}
-	W_j = \argmax_{W_j\in D_W^{n}} \mathbb{E}_p(\boldsymbol{x}W_j|y_j)\text{ where } \lVert W_j \rVert_u=a_j
-\end{gather*}
-In zero-order ECC network we assume that $Q=W$. Then maximization of $\boldsymbol{x}W$ is synonymous with maximization of both $\boldsymbol{x}Q$ and $\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. 
-
-\iffalse
-\subsubsection{Optimal clustering maximizes $p(\boldsymbol{x}|y_k)$} 
-The effectiveness of neurons depends on their ability to maximize $q(\boldsymbol{x}|y_j)$ for all inputs that belong to a given cluster $\boldsymbol{x}\in C(y_j)$ and minimize $q(\boldsymbol{x}|y_j)$ for those that don't  $\boldsymbol{x}\notin C(y_k)$. In an ideal case $q(\boldsymbol{x}|y_j)$ would be $0$ for all $\boldsymbol{x}\notin C(y_j)$. 
-
-The $Q$ matrix is not capable of fitting every distribution $q(\boldsymbol{x}|y_k)$.
-If we assume that
-\[
-C(y_j) = \{\boldsymbol{x}:j=\argmax \boldsymbol{x}W\}
-\]
-then the network could use $W$ matrix to optimally cluster $\boldsymbol{x}$ in a way that makes the task of fitting $q(\boldsymbol{x}|y_j)$ easier for $Q$. If we can show
-\[
-\boldsymbol{x}W_j \le \boldsymbol{x}W_h  \implies  \boldsymbol{x}Q_j \le \boldsymbol{x}Q_h 
-\]
-then it would imply that maximization of $\boldsymbol{x}W_j$ leads to higher overlap
-$\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. If most inputs $\boldsymbol{x}\in C(y_j)$ share many bits in common, then $Q_j$ can better fit $p(\boldsymbol{x}|y_j)$ by assigning higher probabilities only to those highly frequent bits and near-zero everywhere else. This leads to agreement between $p$ and $q$. 
-\fi
-
-
-\subsubsection{Expected value $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ maximizes $\boldsymbol{x}W_j$ under $\ell_2$ norm} 
-
+\end{proof}
+\begin{theorem}
+	\label{theorem:E_x_y_maximizes_xW_under_l2}
+Expected value $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ maximizes the expected dot product $\boldsymbol{x}W_j$ under $\ell_2$ norm.
+\end{theorem}
+\begin{proof}
 We wish to maximize the expected value of $\boldsymbol{x}W_j$
 \[
 \mathbb{E}_{p}(\boldsymbol{x}W_j|y_j)=\sum_{\boldsymbol{x}\in C(y_j)} \boldsymbol{x} W_j p(\boldsymbol{x}|y_j)
@@ -1386,13 +1350,16 @@ W_j = \frac{1}{2\lambda }\sum_{\boldsymbol{x}\in C(y_j)} \boldsymbol{x} p(\bolds
 By taking the second derivative we can show that this is indeed a local maximum.
 The problem is convex (there is only one extremum), because all observations are binary vectors (Frechet mean on $S^{n-1}$ unit sphere is unique if all points lie on the same hemisphere) and the expected value $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ will never be a zero vector.
 
-It should be noted that such expected value will be skewed more towards the $\boldsymbol{x}$ with greater cardinality. To avoid any biases, it is necessary to normalize the vectors 
+It should be noted that such expected value will be skewed more towards the $\boldsymbol{x}$ with greater cardinality. To avoid any biases, one could normalize the vectors 
 \[
 \mathbb{E}_{p}\big(\frac{\boldsymbol{x}}{\lVert \boldsymbol{x} \rVert_2}W_j|y_j \big)= \sum_{\boldsymbol{x}\in C(y_j)} \frac{\boldsymbol{x}}{\lVert \boldsymbol{x} \rVert_2} W_j p(\boldsymbol{x}|y_j)
 \]
+\end{proof}
 
-
-\subsubsection{One-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm}
+\begin{theorem}
+One-hot vector maximizes expected $\boldsymbol{x}W$ under $\ell_1$ norm.
+\end{theorem}
+\begin{proof}
 We wish to maximize the expected value of $\boldsymbol{x}W_j$ 
 \[
 \mathbb{E}_{p}(\boldsymbol{x}W_j|y_j)=\sum_{\boldsymbol{x}\in C(y_j)} \boldsymbol{x} W_j p(\boldsymbol{x}|y_j) \text{ where } \lVert W_j \rVert_1=1
@@ -1402,19 +1369,28 @@ sampled according to some distribution $p(\boldsymbol{x}|y_j)$ from a given set 
 \sum_{\boldsymbol{x}\in C(y_j)} \boldsymbol{x} W_j p(\boldsymbol{x}|y_j) = \mathbb{E}_{p}(\boldsymbol{x} W_j|y_j) = \mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j
 \]
 because $\mathbb{E}$ is a linear operator. The value of $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ is some real vector $\mathbb{R}^n$.  It can be observed that $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is maximized when $W_j$ is a one-hot vector with $w_{ij}=1$ for such $i$ where $p(x_i|y_j)$ is maximal. 
-
-\subsubsection{Generalized $a_j$-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm}
-The result above can be generalized for $\lVert W_j \rVert_1 = a_j$ where $a_j$ is any positive constant, not just $1$. When $a_j=1$, then we have a guarantee that $w_{ij}\le 1$ for all $i$. Hence, our original definition of $W_j$ was a real vector $W_j\in \mathbb{R}^n$, but implicitly it was only $W_j\in [0,1]^n$. 
+\end{proof}
+The theorem above could be generalized to many-hot vectors. 
+\begin{theorem}
+	\label{theorem:a_j-hot_maximizes_xW_under_l1}
+Generalized $a_j$-hot vector maximizes $\boldsymbol{x}W$ under $\ell_1$ norm.
+\end{theorem}
+\begin{proof}
+The previous result can be generalized to $\lVert W_j \rVert_1 = a_j$ where $a_j$ is any positive constant, not just $1$. When $a_j=1$, then we have a guarantee that $w_{ij}\le 1$ for all $i$. Hence, our original definition of $W_j$ was a real vector $W_j\in \mathbb{R}^n$, but implicitly it was only $W_j\in [0,1]^n$. 
 
 When $a_j\ne 1$, then we must be explicit and state exactly the allowed range of values for $w_{ij}$. Let us consider a scenario where $a_j\in\mathbb{N}^+$ and $W_j\in [0,1]^n$, then the value of $W_j$ that maximizes $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is an $a_j$-hot vector with $w_{ij}=1$ for all $i$ such that $p(x_i|y_j)$ is among the top $a_j$ highest probabilities. 
 
 If $a_j\in\mathbb{R}^+$ and $W_j\in [0,1]^n$ then we can maximize $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ using similar strategy. First, we find the $\lfloor a_j \rfloor$ highest values $p(x_i|y_j)$ and assign $w_{ij}=1$ for all those $i$. Lastly, we find the $\lfloor a_j \rfloor+1$ highest value of $p(x_i|y_j)$ and assign the remaining fractional value to $w_{ij}=a_j - \lfloor a_j \rfloor$. 
-
-For example, let 
-$\mathbb{E}_{p}(\boldsymbol{x}|y_j) = [0.2,0.3,0.8,0.7,0.4]$ . If $a_j=3$ then maximal $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is obtained for 
-$W_j=[0,0,1,1,1]$. If $a_j=2.3$ then maximum is at $W_j=[0,0,1,1,0.3]$.
-
-\subsubsection{Proof of k-means convergence for first-order networks}
+\end{proof}
+\begin{example}
+	Let 
+	$\mathbb{E}_{p}(\boldsymbol{x}|y_j) = [0.2,0.3,0.8,0.7,0.4]$ . If $a_j=3$ then maximal $\mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j$ is obtained for 
+	$W_j=[0,0,1,1,1]$. If $a_j=2.3$ then maximum is at $W_j=[0,0,1,1,0.3]$.
+\end{example}
+ECC networks are a form of k-means algorithm. Its convergence is proved by the next theorem.
+\begin{definition}
+	\label{definition:learning_ecc}
+\textit{The learning algorithm for ECC networks} is as follows.
 Start with some arbitrary $C^{(0)}$ at time step $t=0$. Given $C^{(t)}$ compute $Q^{(t)}$
 \[
 Q^{(t)}_j = \mathbb{E}_p(\boldsymbol{x}|y_j)
@@ -1423,10 +1399,18 @@ Given $C^{(t)}$ and $Q^{(t)}$ compute weights $W^{(t)}$
 \begin{gather*}
 	W_j^{(t)} = \argmax_{W_j\in D_W^{n}} \mathbb{E}_p(\boldsymbol{x}W_j|y_j)\text{ where } \lVert W_j \rVert_u=a_j
 \end{gather*}
-Given $W^{(t)}$ compute new clusters $C^{(t)}$
+The theorems \ref{theorem:E_x_y_maximizes_xW_under_l2} and \ref{theorem:a_j-hot_maximizes_xW_under_l1} show us how to implement this step in the case of $\ell_2$ and $\ell_1$ norm.
+This computation does not require access to $p$ because $\mathbb{E}_{p}(\boldsymbol{x} W_j|y_j) = \mathbb{E}_{p}(\boldsymbol{x}|y_j)W_j = Q^{(t)}_jW_j$ and $Q^{(t)}_j$ can be approximated from empirical distribution (dataset). 
+Next, given $W^{(t)}$ compute new clusters $C^{(t)}$
 \[
 C^{(t+1)}(y_j) = \{\boldsymbol{x} : j=\argmax(\boldsymbol{x}W^{(t)})\}
 \]
+Repeat until convergence.
+\end{definition}
+\begin{theorem}
+Learning algorithm for first-order ECC networks converges and maximizes the expected $\boldsymbol{x}W_j$.
+\end{theorem}
+\begin{proof}
 To show that convergence is guaranteed, let us define a fitness function
 \[
 \mathcal{L}^{(t)} = \sum_{j=1}^m \sum_{\boldsymbol{x}\in C^{(t)}(y_j)} \boldsymbol{x} W_j^{(t)} p(\boldsymbol{x})
@@ -1439,28 +1423,40 @@ The first inequality holds because it can be rewritten as
 \[\sum_{j=1}^m p(y_j) \mathbb{E}(\boldsymbol{x} W_j^{(t)}|y_j)  \le \sum_{j=1}^m  p(y_j)  \mathbb{E}(\boldsymbol{x}W_j^{(t+1)}|y_j)\] 
 and we know that $W_j^{(t+1)}$ maximizes $\mathbb{E}(\boldsymbol{x}W_j^{(t+1)})$.
 The second inequality holds, because any two clusters $C^{(t)}(y_j)$ and  $C^{(t+1)}(y_j)$ will differ only when there exists some $\boldsymbol{x}\in C^{(t)}(y_j)$ such that there is some other $y_h$ for which $\boldsymbol{x}W_h \ge \boldsymbol{x} W_j$. This implies that the total sum over all clusters cannot decrease.
+\end{proof}
+	
+	
+\begin{definition}
+	\textit{Zero-order ECC networks} are first-order networks such that $Q=W$. Then maximization of $\boldsymbol{x}W$ is synonymous with maximization of both $\boldsymbol{x}Q$ and $\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. 
+\end{definition}
 
-\subsubsection{Convergence is not guaranteed for zero-order networks}
-The k-means procedure for zero-order networks is almost identical as above, except that $W^{(t)}=Q^{(t)}$. The loss function becomes
+The k-means learning procedure for zero-order networks is almost identical, except that $W^{(t)}=Q^{(t)}$. The loss function becomes
 \begin{gather*}
 \mathcal{L}^{(t)} = \sum_{j=1}^m \sum_{\boldsymbol{x}\in C^{(t)}(y_j)} \boldsymbol{x} Q_j^{(t)} p(\boldsymbol{x}) = \sum_{j=1}^m p(y_j) \mathbb{E}(\boldsymbol{x} Q_j^{(t)}|y_j) = \\ 
 = \sum_{j=1}^m p(y_j) \mathbb{E}(\langle \boldsymbol{x},\boldsymbol{x}' \rangle |y_j) 	 = \mathbb{E}(\langle \boldsymbol{x},\boldsymbol{x}' \rangle)
 \end{gather*}
-The previous proof no longer applies, because $Q_j$ does not maximize $\mathbb{E}(\boldsymbol{x}W_j|y_j)$. Empirical benchmarks showed that the fitness function increases and converges, but not always monotonously. 
-
-\subsubsection{Convergence of $Q$ in online-learning}
-In the proofs based on k-means algorithm, we were allowed to compute $Q$ exactly. 
+The previous proof no longer applies, because $Q_j$ does not maximize $\mathbb{E}(\boldsymbol{x}W_j|y_j)$. Empirical benchmarks show that the fitness function increases and converges, but not always monotonously. 
+\begin{definition}
+	\label{definition:incremental_learning_ecc}
+\textit{Incremental ECC learning algorithm} is defined identically as in \ref{definition:learning_ecc} but instead of
 \[
-Q_j = \sum_{\boldsymbol{x}\in C(y_j)}\boldsymbol{x}p(\boldsymbol{x}|y_j)
+Q^{(t)}_j = \mathbb{E}_p(\boldsymbol{x}|y_j)
 \]
-If we do not have access to $p$, we could use empirical distribution $\bar{p}$, given to us in form of some observed sample (dataset). In the case of online-learning, our algorithm receives an infinite stream of samples that cannot be stored or replayed. We can still approximate $Q$ with the following algorithm
+we have
 \begin{lstlisting}
 $Q_j$ = random_initialization()
 for $\boldsymbol{x}$ sampled from $p(\boldsymbol{x}|y_j)$:
     $Q_j$ = $(1-\epsilon)Q_j + \epsilon \boldsymbol{x}$ 
+    
 \end{lstlisting}
-This is a moving-average approximation of $p(x_i|y_j)$, which converges due to central limit theorem (CLT). To prove it, suppose $\boldsymbol{x}_1,\boldsymbol{x}_2,...,\boldsymbol{x}_t$ is a sample and $\bar{\boldsymbol{x}}$ is it's mean. Then after observing new $\boldsymbol{x}_{t+1}$, the updated mean is $\frac{t\bar{\boldsymbol{x}} + \boldsymbol{x}_{t+1} }{t+1}$. If we put $\epsilon=\frac{1}{\text{t+1}}$, then CLT states that $\bar{\boldsymbol{x}}$ approaches $\mathbb{E}(\boldsymbol{x}|y_j)$ as $t$ goes to infinity. As $x_i$ is a binary random variable, it implies that $\mathbb{E}(x_i|y_j)=p(x_i|y_j)$. Hence, if we choose small $\epsilon$, then $Q$ will approximate $p$ with greater precision.
-
+\end{definition}
+\begin{theorem}
+Incremental learning of $Q$ converges to $\mathbb{E}_p(\boldsymbol{x}|y_j)$ for arbitrarily small $\epsilon$.
+\end{theorem}
+\begin{proof}
+Incremental learning of $Q$ is a moving-average approximation of $p(x_i|y_j)$ which converges due to central limit theorem (CLT). To see it, suppose $\boldsymbol{x}_1,\boldsymbol{x}_2,...,\boldsymbol{x}_t$ is a sample and $\bar{\boldsymbol{x}}$ is its mean. Then after observing new $\boldsymbol{x}_{t+1}$, the updated mean is $\frac{t\bar{\boldsymbol{x}} + \boldsymbol{x}_{t+1} }{t+1}$. If we put $\epsilon=\frac{1}{\text{t+1}}$, then CLT states that $\bar{\boldsymbol{x}}$ approaches $\mathbb{E}(\boldsymbol{x}|y_j)$ as $t$ goes to infinity. As $x_i$ is a binary random variable, it implies that $\mathbb{E}(x_i|y_j)=p(x_i|y_j)$. Hence, if we choose small $\epsilon$, then $Q$ will approximate $p$ with greater precision.
+\end{proof}
+\iffalse
 There also exists an alternative algorithm that can approximates $p(i|y_j)$ instead of $p(x_i|y_j)$. It is defined as
 \begin{gather*}
 	q(i|y_j) = \frac{q(x_i=1|y_j)}{\sum_{ï=0}^n{q(x_{ï}=1|y_j)}} \\
@@ -1477,228 +1473,429 @@ for $\boldsymbol{x}$ sampled from $p(\boldsymbol{x}|y_j)$:
     $Q_j$ = $Q_j + \epsilon \boldsymbol{x}$ 
     $Q_j$ = $Q_j$/$\lVert Q_j \rVert_1$
 \end{lstlisting}
+\fi
+Empirical experiments show that all of the algorithms mentioned so far converge but the results of convergence are not very useful because the clustering $C$ tends to discover only the most frequent patterns. This pursuit of maximizing $\mathbb{E}_p(\boldsymbol{x}W_j|y_j)$ results in a handful of $y_j$ having very high probabilities $p(y_j)$, while the rest of output neurons are almost never activated. In order to make use of all $y_j$ units we should seek to maximize information carried by each $y_j$. This coincides with maximizing entropy.
 
-\subsubsection{Higher-order networks}
-
-The distribution $q(\boldsymbol{x})$ is modelled as a sum
-\[
-q(\boldsymbol{x}) = \sum_{j=1}^{m}q(\boldsymbol{x}|y_j)p(y_j) 
-\]
-Such factorization is motivated by the assumption that the external world has many latent causes $y_j$, and every one of them produces noisy observations $x_i$. The real world could potentially be approximated using trillions of latent causes, each one corresponding to some state of the world and objects in it. 
-
-Many of the latent causes will produce similar or nearly identical observations. Could we exploit those similarities and compress our model, so that $m$ is as small as possible? 
-
-One way to reduce the number of $y$'s is by adding two (or more) of them as follows
-\[
-q(\boldsymbol{x}|y_1) p(y_1)+q(\boldsymbol{x}|y_2) p(y_2) = 
-q(\boldsymbol{x}|y_1\text{ or }y_2) (p(y_1)+p(y_2))
-\]
-but storing $q(\boldsymbol{x}|y_1\text{ or }y_2)$ directly is impossible, because $Q$ can only be used to represent mutually independent bits $x_i$. 
-\[
-\frac{q(\boldsymbol{x}|y_1;Q_1) p(y_1)+q(\boldsymbol{x}|y_2;Q_2) p(y_2)}{p(y_1)+p(y_2)} \ne 
-q\big(\boldsymbol{x}|y_1\text{ or }y_2;\frac{Q_1p(y_1) +Q_2p(y_2)}{p(y_1)+p(y_2)}\big) 
-\]
-The first-order ECC networks modelled the conditional distribution $q(\boldsymbol{x}|y_1)$ as
-\[
-q(\boldsymbol{x}|y_1) = \prod_{i=1}^{n}q(x_i|y_1)
-\]
-Second-order networks are allowed to model distribution $q(\boldsymbol{x}|y_1\text{ or }y_2)$. 
-\[
-q(\boldsymbol{x}|y_1\text{ or }y_2) = \prod_{i=1}^{n}q(x_i|y_1) + \prod_{i=1}^{n}q(x_i|y_2)
-\]
-In this case, the network has a single neuron unit ``$y_1\text{ or }y_2$'' that has two ``dendritic segments'' $y_1$ and $y_2$. The neuron will activate if any of its dendrites is excited. Analogically, third-order ECC have the capacity to model $q(\boldsymbol{x}|y_1\text{ or }y_2\text{ or }y_3)$. 
-\[
-q(\boldsymbol{x}|y_1\text{ or }y_2\text{ or }y_3) = \prod_{i=1}^{n}q(x_i|y_1) + \prod_{i=1}^{n}q(x_i|y_2) + \prod_{i=1}^{n}q(x_i|y_3)
-\]
-Higher-order networks are allowed to ``factor out'' certain common bits. For example suppose $n=2$, then we could model $y_*$ as a mix of $y_1$, $y_2$ and $y_3$ with additional assumption of the equality $q(x_1|y_1)=q(x_1|y_2)$
-\[
-q(\boldsymbol{x}|y_*) = q(x_1|y_1)\big(q(x_2|y_1) +q(x_2|y_1)\big) + q(x_1|y_3)q(x_2|y_3)
-\]
-More generally, a higher-order network is the union of $1,2,3...$-order networks with equality constraints of the form $q(x_{i_1}|y_{j_1})=q(x_{i_2}|y_{j_2})$. Factoring out common bits leads to equations with a tree-like nested structure of brackets. This could be used to model dendritic trees of biological neurons.
-
-\subsubsection{Probability distribution of $\argmax$}
-\label{paragraph:entropy_maximization}
-Let $\boldsymbol{s} \in \mathbb{R}^m$ be a vector of random variables. The probability distribution of $k = \argmax \boldsymbol{s}$ is equal to
-\[
+\iffalse
+\begin{theorem}
+Let $\boldsymbol{s} \in \mathbb{R}^m$ be a vector of i.i.d random variables. Then $p(\argmax_j s_j=k) = \frac{1}{m}$. 
+\end{theorem}
+\begin{proof}
+The probability distribution of $k = \argmax \boldsymbol{s}$ is equal to
+	\[
 	p(\argmax_j s_j=k) = \int p(s_k=z)\prod_{j\ne k} p(s_j < z) dz 
-\]
-where $p(s_k=z)=\frac{d p(s_k<z)}{d z}$. In the special case where all $s_j$ are i.i.d., we obtain $p(s_{k}<z)=p(s_{k'}<z)$ for any two $1\le k,k' \le m$,
-\[
-p(\argmax_j s_j=k) = \int p(s_{k}=z) p(s_{k} < z)^{m-1} dz = p(\argmax_j s_j=k')
-\]
-which implies
-\[
-p(\argmax_j s_j=k) = \frac{1}{m}
-\]
+	\]
+	where $p(s_k=z)=\frac{d p(s_k<z)}{d z}$. When $s_j$ are i.i.d., we obtain $p(s_{k}<z)=p(s_{k'}<z)$ for any two $1\le k,k' \le m$,
+	\[
+	p(\argmax_j s_j=k) = \int p(s_{k}=z) p(s_{k} < z)^{m-1} dz = p(\argmax_j s_j=k')
+	\]
+	which implies
+	\[
+	p(\argmax_j s_j=k) = \frac{1}{m}
+	\]
+\end{proof}
 
-Consider a more general case of the distribution of $k=\argmax \boldsymbol{s}+\boldsymbol{r}$ where $s_j$ are i.i.d. random variables and $\boldsymbol{r}\in \mathbb{R}^m$ are constants. 
+\begin{theorem}
+Let $\boldsymbol{s} \in \mathbb{R}^m$ be a vector of i.i.d random variables and $\boldsymbol{r}\in \mathbb{R}^m$ are constants. Then $p(\argmax \boldsymbol{s}+\boldsymbol{r}) = \frac{1}{m}$. 
+\end{theorem}
+\begin{proof}
 \[
-p(\argmax_j s_j=k) = \int p(s_k=z-r_k)\prod_{j\ne k} p(s_j+r_j< z) dz
+p(\argmax_j s_j+r_j=k) = \int p(s_k=z-r_k)\prod_{j\ne k} p(s_j+r_j< z) dz
 \] 
 By changing variable  $z := z-r_k$ we obtain
 \[	
-p(\argmax_j s_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
+p(\argmax_j s_j+r_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
 \]
 where $u_{kj}=r_j-r_k$. If $u_{kj} \ge u_{k'j}$ then $p(s_j + u_{kj} < z) \le p(s_j + u_{k'j}< z)$. If $u_{kj} \ge u_{k'j}$  for all $j$ then $p(\argmax_j s_j=k) \le p(\argmax_j s_j=k')$. If $r_k \le r_{k'}$ then $u_{kj} = r_j-r_k \ge r_j-r_{k'} = u_{k'j}$. This implies that if $r_k \le r_{k'}$ then $p(\argmax_j s_j=k) \le p(\argmax_j s_j=k')$. 
-
-Further let us consider a more general case of  $k=\argmax \boldsymbol{s}+\boldsymbol{r}$ where $s_j\sim D_j$ are independent random variables drawn from (possibly different) distributions $D_j$ with continuous probability mass functions. Continuity of $p(s_j=z)$ implies continuity of $p(s_j < z)$. Therefore $p(s_j +r_j< z)$ is continuous with respect to $r_j$, which further implies continuity of  $p(\argmax_j s_j=k)$ with respect to $\boldsymbol{r}$ (because integral of a continuous function is continuous). The minimum and maximum value of $r_k$ is unbounded, therefore we can choose it to obtain $p(\argmax_j s_j=k)$ arbitrarily close to $0$ or $1$. By intermediate value theorem we know that $p(\argmax_j s_j=k)$ takes on any value between $0$ and $1$, therefore there exists some $r_k$ such that  $p(\argmax_j s_j=k)=\frac{1}{m}$. We can find such $r_k$ by solving the system of  differential equations
+\end{proof}
+\fi
+\begin{theorem}
+\label{theorem:exists_r_such_that_argmax_s_plus_r_is_uniform}
+Let $\boldsymbol{s}$ be independent random variables with continuous mass distribution functions $p(s_j=z)$.
+Then there exists $\boldsymbol{r} \in \mathbb{R}^m$ such that $p(\argmax \boldsymbol{s}+\boldsymbol{r}=k)=\frac{1}{m}$ is uniform.
+\end{theorem}
+\begin{proof}
+	Continuity of $p(s_j=z)$ implies continuity of $p(s_j < z)$. Therefore $p(s_j +r_j< z)$ is continuous with respect to $r_j$, which further implies continuity of  $p(\argmax_j s_j+r_j=k)$ with respect to $\boldsymbol{r}$ (because integral of a continuous function is continuous). The minimum and maximum value of $r_k$ is unbounded, therefore we can choose it to obtain $p(\argmax_j s_j+r_j=k)$ arbitrarily close to $0$ or $1$. As $p(\argmax_j s_j+r_j=k)$ takes on any value between $0$ and $1$, by intermediate value theorem there exists some $r_k$ such that  $p(\argmax_j s_j+r_j=k)=\frac{1}{m}$. By Poincaré–Miranda theorem we can find vector $\boldsymbol{r}$ such that this holds for all $r_j$ simultaneously.
+\end{proof}
+\begin{theorem}
+The system of differential equations $\frac{d r_k}{d t} = -p(\argmax_j s_j + r_j = k)$ converges to the $\boldsymbol{r}$ mentioned in theorem \ref{theorem:exists_r_such_that_argmax_s_plus_r_is_uniform}. 
+\end{theorem}
+\begin{proof}
+We can find the $r_k$ whose existence is shown in \ref{theorem:exists_r_such_that_argmax_s_plus_r_is_uniform} by solving the system of  differential equations
 \[
-\frac{d r_k}{d t} = \frac{1}{m}-p(\argmax_j s_j=k)
+\frac{d r_k}{d t} = \frac{1}{m}-p(\argmax_j s_j+r_j=k)
 \]
 Clearly $\frac{1}{m}$ is a stable and unique fix-point. 
 The constant $\frac{1}{m}$ is uniformly applied to all $r_k$ for $1 \le k \le m$ and it has no effect on 
 \[
-\frac{du_{kj}}{dt}=\frac{dr_j-r_k}{dt} = \big(\frac{1}{m}-p(\argmax \boldsymbol{s}=j)\big)-\big(\frac{1}{m}-p(\argmax \boldsymbol{s}=k)\big)
+\frac{du_{kj}}{dt}=\frac{dr_j-r_k}{dt} = \big(\frac{1}{m}-p(\argmax \boldsymbol{s}+\boldsymbol{r}=j)\big)-\big(\frac{1}{m}-p(\argmax \boldsymbol{s}+\boldsymbol{r}=k)\big)
 \]
-Therefore we can drop $\frac{1}{m}$ from 
+Therefore we can drop $\frac{1}{m}$ and obtain 
 \[
-\frac{d r_k}{d t} = -p(\argmax_j s_j=k)
+\frac{d r_k}{d t} = -p(\argmax_j s_j+r_j=k)
 \]
-The value of $p(\argmax_j s_j=k)$ can be found using numerical Monte Carlo methods. A particularly efficient implementation approximates $\frac{d r_k}{d t}$ using expected values as follows
+\end{proof}
+The value of $p(\argmax_j s_j+r_j=k)$ can be found using numerical Monte Carlo methods.
+\begin{definition}
+\label{paragraph:entropy_maximization}
+The \textit{entropy maximization algorithm} approximates $\frac{d r_k}{d t}$ using expected values as follows.
 \begin{lstlisting}
 repeat forever
     draw random $\boldsymbol{s}$
     $k= \argmax \boldsymbol{s} + \boldsymbol{r}$
     $r_k := r_k - \epsilon$ (where $\epsilon$ is some small constant)
 \end{lstlisting}
-Let us call it the \textit{entropy maximization algorithm}. 
-
-It can be used as a regularization method for ECC networks. Without it, a few $\boldsymbol{y}$ neurons might be excited too often and dominate vast majority of other less frequent neurons, thus preventing complex receptive fields from forming. Empirically it works despite $p(s_j=z)$ not being continuous.
-
-
-\subsection{Symmetries emerging without geometric priors}
-
-Let us recall that deep learning architectures are  $G$-equivariant functions $f:\mathcal{X}\rightarrow \mathcal{Y}$ satisfying $f(x.g)=f(x).g$ for $g\in G$. Such geometric priors are achieved by weight-sharing. Observations $x\in \mathcal{X}$ are signals $\mathcal{X}=\Omega \rightarrow \mathcal{C}$ coming from distribution $p(x)$, which is itself a function $p:\mathcal{X} \rightarrow [0,1]$.   
-ECC networks could be interpreted as (non-differentiable) functions operating on binary-valued signals $\mathcal{C}=\{0,1\}^n$. It is possible to build $G$-equivariant ECC nets, without imposing any geometric priors. An example of convolutional (translation-equivariant) network is presented on figure \ref{fig:ecc_conv_machine}.
-\begin{figure}[!htbp]
-	\centering
-	
-	\begin{tikzpicture}[scale=0.2]
-		\tikzstyle{every node}+=[inner sep=0pt]
-		\draw [black] (8,-12.4) circle (3);
-		\draw (8,-12.4) node {$x_1$};
-		\draw [black] (8,-18.8) circle (3);
-		\draw (8,-18.8) node {$x_2$};
-		\draw [black] (8,-25.2) circle (3);
-		\draw (8,-25.2) node {$x_3$};
-		\draw [black] (8,-31.5) circle (3);
-		\draw (8,-31.5) node {$x_4$};
-		\draw [black] (18.8,-15.4) circle (3);
-		\draw (18.8,-15.4) node {$y_1$};
-		\draw [black] (33.5,-15.4) circle (3);
-		\draw (33.5,-15.4) node {$y_3$};
-		\draw [black] (26.2,-15.4) circle (3);
-		\draw (26.2,-15.4) node {$y_2$};
-		\draw [black] (18.8,-21.7) circle (3);
-		\draw (18.8,-21.7) node {$y_4$};
-		\draw [black] (26.2,-21.7) circle (3);
-		\draw (26.2,-21.7) node {$y_5$};
-		\draw [black] (33.5,-21.7) circle (3);
-		\draw (33.5,-21.7) node {$y_6$};
-		\draw [black] (18.8,-28.2) circle (3);
-		\draw (18.8,-28.2) node {$y_7$};
-		\draw [black] (26.2,-28.2) circle (3);
-		\draw (26.2,-28.2) node {$y_8$};
-		\draw [black] (33.5,-28.2) circle (3);
-		\draw (33.5,-28.2) node {$y_9$};
-		\draw [black] (40.1,-7.3) circle (3);
-		\draw (40.1,-7.3) node {$e_1$};
-		\draw [black] (40.1,-7.3) circle (2.4);
-		\draw [black] (40.1,-14.1) circle (3);
-		\draw (40.1,-14.1) node {$e_2$};
-		\draw [black] (40.1,-14.1) circle (2.4);
-		\draw [black] (40.1,-21.1) circle (3);
-		\draw (40.1,-21.1) node {$e_3$};
-		\draw [black] (40.1,-21.1) circle (2.4);
-		\draw [black] (10.89,-13.2) -- (15.91,-14.6);
-		\fill [black] (15.91,-14.6) -- (15.27,-13.9) -- (15,-14.86);
-		\draw [black] (10.86,-17.9) -- (15.94,-16.3);
-		\fill [black] (15.94,-16.3) -- (15.03,-16.06) -- (15.33,-17.02);
-		\draw [black] (10.89,-13.2) -- (15.91,-14.6);
-		\fill [black] (15.91,-14.6) -- (15.27,-13.9) -- (15,-14.86);
-		\draw [black] (10.96,-12.89) -- (23.24,-14.91);
-		\fill [black] (23.24,-14.91) -- (22.53,-14.29) -- (22.37,-15.28);
-		\draw [black] (10.95,-18.25) -- (23.25,-15.95);
-		\fill [black] (23.25,-15.95) -- (22.37,-15.61) -- (22.56,-16.59);
-		\draw [black] (10.98,-12.75) -- (30.52,-15.05);
-		\fill [black] (30.52,-15.05) -- (29.78,-14.46) -- (29.67,-15.45);
-		\draw [black] (10.97,-18.4) -- (30.53,-15.8);
-		\fill [black] (30.53,-15.8) -- (29.67,-15.41) -- (29.8,-16.4);
-		\draw [black] (37.3,-8.37) -- (21.6,-14.33);
-		\fill [black] (21.6,-14.33) -- (22.53,-14.52) -- (22.17,-13.58);
-		\draw [black] (37.51,-8.81) -- (28.79,-13.89);
-		\fill [black] (28.79,-13.89) -- (29.73,-13.92) -- (29.23,-13.05);
-		\draw [black] (38.2,-9.63) -- (35.4,-13.07);
-		\fill [black] (35.4,-13.07) -- (36.29,-12.77) -- (35.51,-12.14);
-		\draw [black] (37.47,-15.54) -- (28.83,-20.26);
-		\fill [black] (28.83,-20.26) -- (29.77,-20.32) -- (29.29,-19.44);
-		\draw [black] (38.13,-16.37) -- (35.47,-19.43);
-		\fill [black] (35.47,-19.43) -- (36.37,-19.16) -- (35.61,-18.5);
-		\draw [black] (37.27,-15.11) -- (21.63,-20.69);
-		\fill [black] (21.63,-20.69) -- (22.55,-20.89) -- (22.21,-19.95);
-		\draw [black] (38.06,-23.3) -- (35.54,-26);
-		\fill [black] (35.54,-26) -- (36.45,-25.76) -- (35.72,-25.08);
-		\draw [black] (37.43,-22.46) -- (28.87,-26.84);
-		\fill [black] (28.87,-26.84) -- (29.81,-26.92) -- (29.36,-26.03);
-		\draw [black] (37.25,-22.05) -- (21.65,-27.25);
-		\fill [black] (21.65,-27.25) -- (22.56,-27.47) -- (22.25,-26.52);
-		\draw [black] (10.9,-19.58) -- (15.9,-20.92);
-		\fill [black] (15.9,-20.92) -- (15.26,-20.23) -- (15,-21.2);
-		\draw [black] (10.85,-24.28) -- (15.95,-22.62);
-		\fill [black] (15.95,-22.62) -- (15.03,-22.4) -- (15.34,-23.35);
-		\draw [black] (10.96,-19.27) -- (23.24,-21.23);
-		\fill [black] (23.24,-21.23) -- (22.53,-20.61) -- (22.37,-21.6);
-		\draw [black] (10.95,-24.63) -- (23.25,-22.27);
-		\fill [black] (23.25,-22.27) -- (22.37,-21.93) -- (22.56,-22.91);
-		\draw [black] (10.98,-19.14) -- (30.52,-21.36);
-		\fill [black] (30.52,-21.36) -- (29.78,-20.77) -- (29.67,-21.77);
-		\draw [black] (10.97,-24.79) -- (30.53,-22.11);
-		\fill [black] (30.53,-22.11) -- (29.67,-21.72) -- (29.8,-22.71);
-		\draw [black] (10.89,-26) -- (15.91,-27.4);
-		\fill [black] (15.91,-27.4) -- (15.27,-26.7) -- (15,-27.66);
-		\draw [black] (10.87,-30.62) -- (15.93,-29.08);
-		\fill [black] (15.93,-29.08) -- (15.02,-28.83) -- (15.31,-29.79);
-		\draw [black] (10.96,-25.69) -- (23.24,-27.71);
-		\fill [black] (23.24,-27.71) -- (22.53,-27.09) -- (22.37,-28.08);
-		\draw [black] (10.95,-30.96) -- (23.25,-28.74);
-		\fill [black] (23.25,-28.74) -- (22.37,-28.39) -- (22.55,-29.37);
-		\draw [black] (10.98,-25.55) -- (30.52,-27.85);
-		\fill [black] (30.52,-27.85) -- (29.78,-27.26) -- (29.67,-28.25);
-		\draw [black] (10.98,-31.11) -- (30.52,-28.59);
-		\fill [black] (30.52,-28.59) -- (29.67,-28.19) -- (29.8,-29.18);
-	\end{tikzpicture}
-	\caption{A single layer of ECC with one-dimensional convolution. The input size is $4$ columns, each with one channel. The hidden layer has $3$ columns, each with $3$ channels. The neurons within the same column are all mutually exclusive. Every hidden column draws input from two input columns around it, meaning that in this case the kernel size is $2$. The stride is $0$. }
-	\label{fig:ecc_conv_machine}
-\end{figure} 
-While in deep learning $G$-equivariance is a property of the network $f$, ECC flip this notion ``upside down'' and states that distribution $p$ should be $G$-invariant. If $p(x.g)=p(x)$ holds, then the Bayesian inference
-\[
-p(x.g) = p(x) = \sum_{j=1}^m q(x|y_j)p(y_j)  
-\]
-will be the same for every convolutional column. More precisely, $p(x.g)$ and $p(x)$ would be exactly the same if the process of learning was deterministic. The learning algorithm for ECC networks is stochastic, meaning that re-running training on the same distribution $p(x)$ multiple times will not yield ``exactly the same'' results, but there will be correlation between units $\boldsymbol{y}$ up to a permutation.
-As an example, consider the network from figure \ref{fig:ecc_conv_machine}. Both $[y_1,y_2,y_3]$ and $[y_4,y_5,y_6]$ will develop similar clusterings of $[x_1,x_2]$ and $[x_2,x_3]$ respectively
-\begin{gather*}
-	p(\boldsymbol{x}) = p(\boldsymbol{x}|y_1)p(y_1)+  p(\boldsymbol{x}|y_2)p(y_2)+  p(\boldsymbol{x}|y_3)p(y_3)\text{ where }\boldsymbol{x}=[x_1,x_2] \\
-	p(\boldsymbol{x}) = p(\boldsymbol{x}|y_4)p(y_4)+  p(\boldsymbol{x}|y_5)p(y_5)+  p(\boldsymbol{x}|y_6)p(y_6)\text{ where }\boldsymbol{x}=[x_2,x_3]
-\end{gather*}
-They will be approximately equal  (correlated)
-\[p(\boldsymbol{x}|y_2) \approx p(\boldsymbol{x}|y_{\sigma(4)}), p(\boldsymbol{x}|y_{3}) \approx p(\boldsymbol{x}|y_{\sigma(5)}),p(\boldsymbol{x}|y_3) \approx p(\boldsymbol{x}|y_{\sigma(6)})\]
-up to some permutation $\sigma$. All columns learn independently of each other, thus no weight-sharing is required.
-
-This process is not new. Slow feature analysis and other unsupervised learning algorithms can reproduce this phenomenon, if arranged in a hierarchical structure that uses only local (hebbian) update rules. This approach has an advantage over backpropagation, which needs to evaluate all columns at all layers in order to compute error. With hebbian learning, we can save resources by only training a single column and  duplicating it across the entire first layer, then repeat the process for deeper layers.
-
-Producing symmetries with hierarchical structures has been reinvented many times before, but the novelty of this thesis stems from the mathematical formalization of $p$ as $G$-invariant function and relating $G$ to the reinforcement learning state-space $S$ generated by action space $A$. In biological terms, this would mean that eye movement (actions $A$) is necessary to ensure $p$ is invariant to translation, thus potentially allowing convolutional-like structures to emerge in the brain, without requiring weight-sharing.
+\end{definition}
+It be used as a regularization method for ECC networks and works well empirically despite $p(s_j=z)$ not being continuous.
 
 
-\subsection{Experiments}
+In the case of $\ell_2$ norm, the $W_j$ that maximizes $\mathbb{E}_p(\boldsymbol{x}W_j|y_j)$ is $W_j=\mathbb{E}_{p}(\boldsymbol{x}|y_j)$. We could compute $Q$ using algorithm defined in \ref{definition:incremental_learning_ecc} and then obtain $W_j=\frac{Q_j}{\lVert W_j \rVert_2}$ but it is possible to
+simplify and learn $W_j$ directly without using $Q$ at all. 
+\begin{definition}
+Incremental learning algorithm with norm $\ell_2$ and entropy maximization becomes
+\begin{lstlisting}
+repeat forever
+    draw random $\boldsymbol{x}$
+    $\boldsymbol{s} = \boldsymbol{x}W$
+    $k = \argmax \boldsymbol{s} + \boldsymbol{r}$
+    $r_k := r_k - \epsilon$ 
+    $W_k := W_k + \epsilon \boldsymbol{x} / \lVert \boldsymbol{x} \rVert_1$ (dividing by $ \lVert \boldsymbol{x} \rVert_1$ avoids bias)
+    $W_k := W_k / \lVert W_k \rVert_2$
+\end{lstlisting}
+\end{definition}
+The implementation of zero-order networks is identical but divides $W_k$ by $\lVert W_k \rVert_1$ instead of $\lVert W_k \rVert_2$ (which is equivalent to computing $W_k:=(1-\epsilon)W_k+\epsilon\frac{\boldsymbol{x}}{ \lVert \boldsymbol{x} \rVert_1}$ because the norm of $ W_k + \epsilon \frac{\boldsymbol{x}}{ \lVert \boldsymbol{x} \rVert_1}$ is a constant which can be absorbed into $\epsilon$ itself). The first order $\ell_1$ networks have to compute both $Q$ and $W$.
 
-ECC networks have been implemented and benchmarked to investigate their empirical performance. I used extropy maximization, as without it the networks failed to produce complex patterns.
-Figure \ref{fig:receptive_fields} presents receptive fields emerging in one arbitrarily chosen column in each of the first 3 layers of convolutional ECC network. These results have been observed when training all columns in all layers simultaneously on MNIST dataset. 
+\begin{definition}
+	One-dimensional \textit{convolutional ECC network} is an array (finite sequence) of $c$ ECC networks such that the input $\boldsymbol{x}\in \boldsymbol{R}^{n}$ is subdivided into (possibly overlapping) subvectors $\boldsymbol{x}'_0=[x_0,...,x_k]$,
+	$\boldsymbol{x}'_1=[x_s,...,x_{s+k}]$,..., $\boldsymbol{x}'_{c-1}=[x_{(c-1)s},...,x_{(c-1)s+k}]$ with kernel size $k$ and stride $s$ and each subvector is an input to one ECC network. Convolutional network produces output $\boldsymbol{y}\in \{0,1\}^{c\times m}$ with $m$ channels and $c$ columns where each $y'\in \{0,1\}^m$ is produced by one ECC network, also called a \textit{column}.
+\end{definition}
+
+\begin{example}
+An example of convolutional ECC network with 3 columns (each column is an independent ECC network), kernel size $2$ and stride $1$.
+	\begin{figure}[!htbp]
+		\centering
+		
+		\begin{tikzpicture}[scale=0.2]
+			\tikzstyle{every node}+=[inner sep=0pt]
+			\draw [black] (8,-12.4) circle (3);
+			\draw (8,-12.4) node {$x_1$};
+			\draw [black] (8,-18.8) circle (3);
+			\draw (8,-18.8) node {$x_2$};
+			\draw [black] (8,-25.2) circle (3);
+			\draw (8,-25.2) node {$x_3$};
+			\draw [black] (8,-31.5) circle (3);
+			\draw (8,-31.5) node {$x_4$};
+			\draw [black] (18.8,-15.4) circle (3);
+			\draw (18.8,-15.4) node {$y_1$};
+			\draw [black] (33.5,-15.4) circle (3);
+			\draw (33.5,-15.4) node {$y_3$};
+			\draw [black] (26.2,-15.4) circle (3);
+			\draw (26.2,-15.4) node {$y_2$};
+			\draw [black] (18.8,-21.7) circle (3);
+			\draw (18.8,-21.7) node {$y_4$};
+			\draw [black] (26.2,-21.7) circle (3);
+			\draw (26.2,-21.7) node {$y_5$};
+			\draw [black] (33.5,-21.7) circle (3);
+			\draw (33.5,-21.7) node {$y_6$};
+			\draw [black] (18.8,-28.2) circle (3);
+			\draw (18.8,-28.2) node {$y_7$};
+			\draw [black] (26.2,-28.2) circle (3);
+			\draw (26.2,-28.2) node {$y_8$};
+			\draw [black] (33.5,-28.2) circle (3);
+			\draw (33.5,-28.2) node {$y_9$};
+			\draw [black] (40.1,-7.3) circle (3);
+			\draw (40.1,-7.3) node {$e_1$};
+			\draw [black] (40.1,-7.3) circle (2.4);
+			\draw [black] (40.1,-14.1) circle (3);
+			\draw (40.1,-14.1) node {$e_2$};
+			\draw [black] (40.1,-14.1) circle (2.4);
+			\draw [black] (40.1,-21.1) circle (3);
+			\draw (40.1,-21.1) node {$e_3$};
+			\draw [black] (40.1,-21.1) circle (2.4);
+			\draw [black] (10.89,-13.2) -- (15.91,-14.6);
+			\fill [black] (15.91,-14.6) -- (15.27,-13.9) -- (15,-14.86);
+			\draw [black] (10.86,-17.9) -- (15.94,-16.3);
+			\fill [black] (15.94,-16.3) -- (15.03,-16.06) -- (15.33,-17.02);
+			\draw [black] (10.89,-13.2) -- (15.91,-14.6);
+			\fill [black] (15.91,-14.6) -- (15.27,-13.9) -- (15,-14.86);
+			\draw [black] (10.96,-12.89) -- (23.24,-14.91);
+			\fill [black] (23.24,-14.91) -- (22.53,-14.29) -- (22.37,-15.28);
+			\draw [black] (10.95,-18.25) -- (23.25,-15.95);
+			\fill [black] (23.25,-15.95) -- (22.37,-15.61) -- (22.56,-16.59);
+			\draw [black] (10.98,-12.75) -- (30.52,-15.05);
+			\fill [black] (30.52,-15.05) -- (29.78,-14.46) -- (29.67,-15.45);
+			\draw [black] (10.97,-18.4) -- (30.53,-15.8);
+			\fill [black] (30.53,-15.8) -- (29.67,-15.41) -- (29.8,-16.4);
+			\draw [black] (37.3,-8.37) -- (21.6,-14.33);
+			\fill [black] (21.6,-14.33) -- (22.53,-14.52) -- (22.17,-13.58);
+			\draw [black] (37.51,-8.81) -- (28.79,-13.89);
+			\fill [black] (28.79,-13.89) -- (29.73,-13.92) -- (29.23,-13.05);
+			\draw [black] (38.2,-9.63) -- (35.4,-13.07);
+			\fill [black] (35.4,-13.07) -- (36.29,-12.77) -- (35.51,-12.14);
+			\draw [black] (37.47,-15.54) -- (28.83,-20.26);
+			\fill [black] (28.83,-20.26) -- (29.77,-20.32) -- (29.29,-19.44);
+			\draw [black] (38.13,-16.37) -- (35.47,-19.43);
+			\fill [black] (35.47,-19.43) -- (36.37,-19.16) -- (35.61,-18.5);
+			\draw [black] (37.27,-15.11) -- (21.63,-20.69);
+			\fill [black] (21.63,-20.69) -- (22.55,-20.89) -- (22.21,-19.95);
+			\draw [black] (38.06,-23.3) -- (35.54,-26);
+			\fill [black] (35.54,-26) -- (36.45,-25.76) -- (35.72,-25.08);
+			\draw [black] (37.43,-22.46) -- (28.87,-26.84);
+			\fill [black] (28.87,-26.84) -- (29.81,-26.92) -- (29.36,-26.03);
+			\draw [black] (37.25,-22.05) -- (21.65,-27.25);
+			\fill [black] (21.65,-27.25) -- (22.56,-27.47) -- (22.25,-26.52);
+			\draw [black] (10.9,-19.58) -- (15.9,-20.92);
+			\fill [black] (15.9,-20.92) -- (15.26,-20.23) -- (15,-21.2);
+			\draw [black] (10.85,-24.28) -- (15.95,-22.62);
+			\fill [black] (15.95,-22.62) -- (15.03,-22.4) -- (15.34,-23.35);
+			\draw [black] (10.96,-19.27) -- (23.24,-21.23);
+			\fill [black] (23.24,-21.23) -- (22.53,-20.61) -- (22.37,-21.6);
+			\draw [black] (10.95,-24.63) -- (23.25,-22.27);
+			\fill [black] (23.25,-22.27) -- (22.37,-21.93) -- (22.56,-22.91);
+			\draw [black] (10.98,-19.14) -- (30.52,-21.36);
+			\fill [black] (30.52,-21.36) -- (29.78,-20.77) -- (29.67,-21.77);
+			\draw [black] (10.97,-24.79) -- (30.53,-22.11);
+			\fill [black] (30.53,-22.11) -- (29.67,-21.72) -- (29.8,-22.71);
+			\draw [black] (10.89,-26) -- (15.91,-27.4);
+			\fill [black] (15.91,-27.4) -- (15.27,-26.7) -- (15,-27.66);
+			\draw [black] (10.87,-30.62) -- (15.93,-29.08);
+			\fill [black] (15.93,-29.08) -- (15.02,-28.83) -- (15.31,-29.79);
+			\draw [black] (10.96,-25.69) -- (23.24,-27.71);
+			\fill [black] (23.24,-27.71) -- (22.53,-27.09) -- (22.37,-28.08);
+			\draw [black] (10.95,-30.96) -- (23.25,-28.74);
+			\fill [black] (23.25,-28.74) -- (22.37,-28.39) -- (22.55,-29.37);
+			\draw [black] (10.98,-25.55) -- (30.52,-27.85);
+			\fill [black] (30.52,-27.85) -- (29.78,-27.26) -- (29.67,-28.25);
+			\draw [black] (10.98,-31.11) -- (30.52,-28.59);
+			\fill [black] (30.52,-28.59) -- (29.67,-28.19) -- (29.8,-29.18);
+		\end{tikzpicture}
+		\label{fig:ecc_conv_machine}
+	\end{figure} 
+\end{example}
+
+The definition of convolutional ECC network can be easily extended to two-, three- and higher dimensions.
+The definition of input vector $\boldsymbol{x}$ may be extended to  $\boldsymbol{x} \in \{0,1\}^{C\times n}$ containing more than one channel $C\ge 1$. In the example above there is only one input channel but $3$ output channels.
+\begin{definition}
+\textit{Multilayer convolutional ECC network} is an array of convolutional ECC networks such that the output of one is an input to the next.
+\end{definition}
+\begin{example}
+Receptive fields produced by training a multilayer (20 channels in first layer, 49 in second, 60 in third) convolutional network on the MNIST dataset can recognize lines and simple shapes. We arbitrarily pick one column from each layer. All the columns within the same layer looks alike up to some permutation of its neurons.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=15cm]{receptive_fields}
 	\caption{Receptive fields of 20, 49 and 60 neurons from a column in the first, second and third hidden layer.}
 	\label{fig:receptive_fields}
 \end{figure} 
+\end{example}
+We conjecture the following theorem, which cannot be proved definitely, but can be formulated based on empirical observations. 
+\begin{theorem}
+Applying an ECC network learning procedure twice to the same distribution $p$, yields clusterings $C_1$ and $C_2$ such that the outputs are correlated $p(y_j)\approx p(y_{\sigma j})$ up to some permutation $\sigma$.
+\end{theorem}
+Based on this conjecture we can now deduce a few interesting observations.
+\begin{theorem}
+Let $p$ be the distribution of signal $\boldsymbol{x} \in \{C \times n\}$ where $C\ge 1$. If $p$ is translation-invariant, then all columns of convolutional ECC learn equivalent (correlated up to a permutation) representations. 
+\end{theorem}
+\begin{proof}
+If $p(x.g)=p(x)$ then  we apply ECC learning multiple times to the same distribution.
+\end{proof}
+\begin{theorem}
+	Let $p$ be the distribution of signal $\boldsymbol{x} \in \{C\times n\}$ and $G$ some group. If $p$ is $G$-invariant, then all columns of convolutional ECC learn $G$-equivariant representations (up to a permutation).
+\end{theorem}
+\begin{proof}
+Analogical as above.
+\end{proof}
+
+While in deep learning $G$-equivariance is a property of the network $f$, ECC flip this notion ``upside down'' and states that distribution $p$ should be $G$-invariant, thus allowing for learning $G$-equivariant functions without weight sharing. This process is not new. Slow feature analysis and other unsupervised learning algorithms can reproduce this phenomenon, if arranged in a hierarchical structure that uses only local (hebbian) update rules. This approach has an advantage over backpropagation, which needs to evaluate all columns at all layers in order to compute error. With hebbian learning, we can save resources by only training a single column and  duplicating it across the entire first layer, then repeat the process for deeper layers.
+
+Producing symmetries with hierarchical structures has been reinvented many times before, but the novelty here stems from the mathematical formalization of $p$ as $G$-invariant function and relating $G$ to the reinforcement learning state-space $S$ generated by action space $A$. In biological terms, this would mean that eye movement (actions $A$) is necessary to ensure $p$ is invariant to translation, thus potentially allowing convolutional-like structures to emerge in the brain, without requiring weight-sharing.
+
+The model introduced so far suffers from certain significant issues. Without entropy maximization the networks do not learn well, but using it defeats the purpose of out of distribution learning, as all $p(y_j)$ must become equal. From a biological perspective, ECC networks also fail to explain what would happen if a certain $y_j$ neuron was connected to two inhibitory $e_1$, $e_2$ units at once. If $y_j$  could only activate when it is the winner among both $e_1$ and $e_2$ simultaneously, then it's probability $p(y_j)$ must be significantly lower, which causes entropy maximization to collapse. The following model is a generalization of ECC that solves those issues.
+
+\begin{definition}
+Let $\boldsymbol{s}=\boldsymbol{x} W$ and $V\in \{0,1\}^{m\times m}$. 	
+We say that $y_j$ is \textit{shunned} by $y_k$ if and only if  $v_{kj}=1$, $y_k=1$ and $s_k>s_j$. We define soft-winner-takes-all  $\boldsymbol{y}=\swta_V \boldsymbol{s}$ to be an operation returning binary vector $\boldsymbol{y}$ such that $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$.
+\end{definition}
+\begin{theorem}
+Soft-WTA can be computed in polynomial time.
+\end{theorem}
+\begin{proof}
+ The algorithm for computing full vector $\boldsymbol{y}=\swta_V \boldsymbol{s}$ is as follows
+\begin{lstlisting}
+initialize $y_k=\emptyset$ for all $k$
+while $\emptyset\in \boldsymbol{y}$
+    find $k$ of the highest value $s_k$ such that $y_k=\emptyset$
+    for all $j$ such that $v_{kj}=1$ and $s_j<s_k$
+        $y_j=0$ 
+    $y_k=1$
+\end{lstlisting}
+It is not possible to compute bits of $\boldsymbol{y}$ in parallel (unless we use spiking networks and simulate $\boldsymbol{s}$ as spike latencies in continuous time). 
+\end{proof}
+\begin{theorem}
+ If $V$ is transitive (if $v_{kj}=1$ and $v_{lk}=1$ then $v_{lj}=1$) then it is possible to evaluate all bits independently and in parallel (on a digital computer)
+\end{theorem}
+\begin{proof}
+  $y_{k}$ could be $0$ only if there exists some other $y_l=1$ that shunned it.
+\begin{lstlisting}
+for every $j$
+    $y_j=0$ if $\exists_k v_{kj}=1 \wedge s_j<s_k$ otherwise $y_j=1$
+\end{lstlisting}
+\end{proof}
+\begin{theorem}
+Every $V$ is equivalent to its reflexive closure (formally $\swta_V \boldsymbol{s}=\swta_{V'} \boldsymbol{s}$ where  $v'_{jj}=1$ for all $j$ and $v'_{ij}=v_{ij}$ for $i\ne j$) 
+\end{theorem}
+\begin{proof}
+The inequality $s_j > s_j$ is always false.
+\end{proof}
+\begin{theorem}
+	\label{theorem:soft_wta_with_equivalence_classes_is_hard_wta}
+If $V$ is  symmetric ($v_{jk}=v_{kj}$), transitive and (optionally) reflexive then $V$ becomes an equivalence relation on $y$. Then soft-WTA is equivalent to concatenation of several one-hot vectors obtained through $\argmax$ operation.
+\end{theorem}
+\begin{proof}
+	 Units within the same equivalence class all compete with each other and only one of them can win. The soft-WTA algorithm becomes
+\begin{lstlisting}
+for every equivalence class $e$
+    find $k = \argmax s_i$ over all $i \in e$
+    $y_k=1$ 
+    for all $i\in e$ where $i\ne k$
+        $y_i=0$ 
+\end{lstlisting}
+\end{proof}
+\begin{definition}
+The algorithm in proof of theorem \ref{theorem:soft_wta_with_equivalence_classes_is_hard_wta} is called \textit{hard-WTA}. All ECC networks presented so far were \textit{hard-ECC networks}.
+ECC networks that use soft-WTA in place of $\argmax$ are called \textit{soft-ECC networks}.
+\end{definition}
+In general, soft-ECC does no require the network topology to be strictly arranged into layers (and neither does the real brain).
+\begin{corollary}
+When all entries of $V$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, which corresponds to a single-layer non-convolutional ECC network. 
+\end{corollary}
+\begin{definition}
+\textit{Binary vector korrelation matrix} is defined as $\mathbb{E}(\boldsymbol{x}^T\boldsymbol{x})$ where $\boldsymbol{x}\in \{0,1\}^n$ is a random sparse binary vector.
+\end{definition}
+This is not a correlation in the standard sense because it would be undesirable to call two bits $x_h,x_i$ correlated  if they are always silent together $x_i=x_h=0$. The $\mathbb{E}(\boldsymbol{x}^T\boldsymbol{x})$ would be the ``classical'' correlation matrix if we first whitened $\boldsymbol{x}$ (subtracted the mean and divided each bit by its standard deviation). In order to emphasize this difference we spell this non-standard korrelation with `k'.
+\begin{theorem}
+	\label{subsection:s_j_s_k_is_cos_sim}
+Let $\boldsymbol{s}=\boldsymbol{x} W$. The product $\mathbb{E}(s_j s_k)$ is equivalent to $W_j^T C W_k$ where $C$ is the korrelation matrix.
+\end{theorem}
+\begin{proof}
+\[
+\mathbb{E}(s_j s_k) =  \mathbb{E}(\boldsymbol{x} W_j \boldsymbol{x} W_k)=  \mathbb{E}(W_j^T \boldsymbol{x}^T  \boldsymbol{x} W_k) = W_j^T \mathbb{E}(\boldsymbol{x}^T  \boldsymbol{x}) W_k = W_j^T C W_k 
+\]
+\end{proof}
+\begin{corollary}
+In the special case where all bits are unkorrelated $C=I$, we obtain cosine similarity $\mathbb{E}(s_j s_k)=W_j^TW_k$ of weight columns.
+\end{corollary}
+\begin{theorem}
+	\label{theorem:s_j_minus_s_k_is_W_j_minus_W_k}
+The difference between elements of $\boldsymbol{s}$ is related to the difference between weight columns through the equality $\mathbb{E}\big((s_j - s_k)^2\big) = (W_j - W_k)^T C (W_j - W_k)$ where $C$ is the korrelation matrix.
+\end{theorem}
+\begin{proof}
+	\[
+	(s_j - s_k)^2 = \boldsymbol{x} (W_j - W_k) \boldsymbol{x} (W_j - W_k) = (W_j - W_k)^T \boldsymbol{x}^T \boldsymbol{x} (W_j - W_k) 
+	\]
+\end{proof}
+\begin{corollary}
+The square root of second moment $\sqrt{\mathbb{E}\big((s_j - s_k)^2\big)}$ is equal to the euclidean distance between $W_j,W_k$ under the assumption of dekorrelation $C=I$.
+\end{corollary}
+\begin{proof}
+The theorem \ref{theorem:s_j_minus_s_k_is_W_j_minus_W_k} gives us
+\[
+\sqrt{\mathbb{E}\big((s_j - s_k)^2\big)} = \sqrt{(W_j - W_k)^T C (W_j - W_k) }
+\]
+In the special case when bits are unkorrelated $C=I$ we have
+\[
+\sqrt{\mathbb{E}\big((s_j - s_k)^2\big)} = dist_{euclidean}(W_j,W_k)
+\]
+\end{proof}
+
+\begin{definition}
+Consider $U \in \mathbb{R}^{m\times m}$. Suppose that $0\le s_j\le 1$ (which holds if columns $W_j$ are normalized to $a_j=1$ and $\boldsymbol{s}=\boldsymbol{x} W$). 
+We say that $y_j$ is \textit{shunned} by $y_k$ if $s_j+u_{kj}<s_k$ and $y_k=1$. 
+\textit{Real-valued soft-WTA} is the operation $\boldsymbol{y}=\swta_U \boldsymbol{s}$ returning $\boldsymbol{y}$ such that $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$.
+\end{definition}
+\begin{theorem}
+Let $\boldsymbol{r}\in \mathbb{R}^m$ and put $u_{kj}=r_j-r_k$. Then real-valued soft-WTA will almost surely yield identical output as hard-WTA with entropy maximization (formally $\swta_U \boldsymbol{s}= \argmax \boldsymbol{s}+\boldsymbol{r}$). 
+\end{theorem}
+\begin{proof}
+If $s_j+u_{kj}<s_k$ then $s_j+r_j<s_k+r_k$. If $k=\argmax_j s_j+r+j$ then all other $y_j$ are either shunned by $y_k$ or equal $s_j+r_j=s_k+r_k$. As $\boldsymbol{s}$ is a continuous random variable, the probability of that latter event is zero.
+\end{proof}
+\begin{theorem}
+Binary-valued soft-WTA is a special case of real-valued soft-WTA. 
+\end{theorem}
+\begin{proof}
+Put $V=1-U$ and consider $v_{kj} \in \{0,1\}$. If $v_{kj}=1$ then $u_{kj}=0$ and $s_j+u_{kj}=s_j<s_k$. If $v_{kj}=1$ then $u_{kj}=1$ and is $s_j+u_{kj}<s_k$ always false because $s_k \le  1$. 
+\end{proof}
+
+In the general case, continuous values of $U$ can be adjusted independently (without $\boldsymbol{r}$) and incrementally using local Hebbian rules. 
+
+
+Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we state that learning $U$ is the problem of minimizing ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
+
+
+\subsection{Learning soft-WTA $U$ weights}
+\iffalse
+Let us recall that the entropy maximization algorithm  is based on
+\[	
+p(\argmax_j s_j + r_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
+\]
+which assumes that all variables $s_j$ are independent. Soft-WTA relaxes this assumption and models probabilities conditional on latent $\boldsymbol{y}$. 
+\[
+p(y_k) \approx \int_{z}p(s_k=z) \prod_{j\ne k} \big(p(s_j+u_{kj}<z|y_j)p(y_j)+p(\neg y_j)\big) dz
+\] 
+We know that $\boldsymbol{y}$ is uniquely determined by $\boldsymbol{s}$ but the formula above considers $p(y_j)$ and $p(s_k=z)$, as if $\boldsymbol{y}$, $\boldsymbol{s}$ were both random variables. The reason for this is simplification. The interactions between bits of $\boldsymbol{y}$ are too complex to express $p(y_k)$ exactly. 
+\fi
+Consider minimization of the MSE loss function
+\[
+\sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
+\]
+The probability $p(y_j\text{ shunned by } y_k)$ is equal to
+\[
+p(s_j+u_{kj}<s_k \wedge y_k=1) = p(y_k)p(s_j+u_{kj}<s_k|y_k)
+\]
+The optimal solution to our loss function is the expected value
+\[u_{kj}=\mathbb{E}(s_k-s_j|y_k)\]
+
+This ensures that $u_{kj}$ is ``just low enough'' to satisfy $s_j+u_{kj}<s_k$.
+It achieves a regularization effect similar to entropy maximization. It is impossible for a certain $y_j$ to have $p(y_j)=0$ because then for all $y_k$ we would get
+$p(s_j+u_{kj}<s_k|y_k)=1$ meaning that $u_{kj}<s_k-s_j$ is always true and $u_{kj}$ is below it's expected value, thus leading to contradiction. Analogically it is also impossible for a neuron to always be active  $p(y_j)=0$. 
+
+Empirically soft-WTA converges and produces complex patterns not only when $u_{kj}=\mathbb{E}(s_k-s_j|y_k)$ but also for $u_{kj}=\mathbb{E}(\lvert s_k-s_j\rvert  |y_k)$, $u_{kj}=\mathbb{E}( s_k s_j |y_k)$ and possibly others. It remains an open question how those different settings relate to each other, why they converge and whether one of them could hold the key to outperforming deep nets in more complex tasks than MNIST recognition.
+
+
+\begin{definition}
+	\textit{Bursting ECC network} is an incremental ECC network in which the output pattern $\boldsymbol{y}^{(t)}$ is at random time steps $t$ set equal to the pattern in previous step $\boldsymbol{y}^{(t-1)}$. 
+\end{definition}
+\begin{definition}
+	\textit{Slow binary feature analysis} problem is the formulated as minimization of $\frac{d\boldsymbol{y}}{dt}$. As the bits of $\boldsymbol{y}$ are mutually-exclusive  is an incremental ECC network in which the output pattern $\boldsymbol{y}^{(t)}$ is at random time steps $t$ set equal to the pattern in previous step $\boldsymbol{y}^{(t-1)}$. 
+\end{definition}
+The weights $W$ at $t$ are reinforced between $\boldsymbol{y}^{(t)}$ and $\boldsymbol{x}^{(t)}$
+
+The ECC networks can perform well on simple tasks such as MNIST. Figure \ref{fig:convergence_rate} shows the converge speed and figure \ref{table:ecc_accuracy} shows the accuracy.
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=13.5cm]{convergence_rate}
+	\caption{Convergence rate of 3-layer ECC compared with 3-layer deep net. A linear classifier head is placed as a fourth layer on both networks and trained independently of the rest. ECC achieves high scores even before learning (only the head was trained), because sparse binary vectors have the effect of random projections.}
+	\label{fig:convergence_rate}
+\end{figure} 
+\begin{table}[]
+	\begin{tabular}{|llllll|}
+		\hline
+		layer    & 1     & 2     & 3     & 4    & 5    \\ \hline
+		channels & 49    & 100   & 144   & 256  & 256  \\ 
+		test    & 98\%  & 96\%  & 96\%  & 91\% & 68\% \\ 
+		train     & 100\% & 100\% & 100\% & 95\% & 68\% \\ \hline
+	\end{tabular}
+	\caption{Accuracy on MNIST observed by adding linear classifier head on top of each layer. This shows a decrease in the quality of learned representations. All layers use convolutional kernel of size 6 by 6. There is no weight sharing.}
+	\label{table:ecc_accuracy}
+\end{table}
+As the depth of ECC network grows the accuracy suffers. 
+
+
+\iffalse
+\section{Experiments}
+
+ECC networks have been implemented and benchmarked to investigate their empirical performance. I used extropy maximization, as without it the networks failed to produce complex patterns.
+Figure \ref{fig:receptive_fields} presents receptive fields emerging in one arbitrarily chosen column in each of the first 3 layers of convolutional ECC network. These results have been observed when training all columns in all layers simultaneously on MNIST dataset. 
+
 The convergence speed (fig. \ref{fig:convergence_rate}) is fast and can outperform deep networks.
 \begin{figure}[!htbp]
 	\centering
@@ -1746,19 +1943,19 @@ This approach of leveraging slowness principle has a significant  positive effec
 			train    & 100\% & 99\% & 100\% & 99\% & 100\% & 98\% & 100\% & 95\% & 95\% & 87\% & 75\% \\ \hline
 		\end{tabular}%
 	}
-
+	
 	\caption{Each layer with even number uses slowness principle and its activations are randomly fixed. The odd layers do not fix their activations. The kernel size is 6x6 for odd and 1x1 for even layers. An interesting observation is that slowness allows for significant reduction in number of channels.}
 	\label{table:ecc_accuracy_slow}
 \end{table}
 It is noteworthy that the final layer still has unacceptably low accuracy for such a simple task. We could compare this multilayer architecture to a single very wide dense layer (table \ref{table:ecc_accuracy_wide}).
 \begin{table}[]
-		\begin{tabular}{|lllll|}
-			\hline
-			output size      & 100  & 400  & 256  & 2025 \\ \hline
-			testset accurcy & 85\% & 88\% & 89\% & 93\% \\ 
-			trainset accuracy & 84\% & 87\% & 88\% & 93\% \\
-			\hline
-		\end{tabular}
+	\begin{tabular}{|lllll|}
+		\hline
+		output size      & 100  & 400  & 256  & 2025 \\ \hline
+		testset accurcy & 85\% & 88\% & 89\% & 93\% \\ 
+		trainset accuracy & 84\% & 87\% & 88\% & 93\% \\
+		\hline
+	\end{tabular}
 	\caption{The accuracy benchmarks of a single densely-connected layer with varying output size $m$}
 	\label{table:ecc_accuracy_wide}
 \end{table}
@@ -1779,139 +1976,94 @@ It shows that the single layer can outperform the top layer of deeper architectu
 \end{table}
 When the information about location is erased, the accuracy becomes significantly lower (table \ref{table:ecc_accuracy_voting}). The initial layers have a very small receptive field, thus their poor performance is understandable. The deeper layers get gradually better. At the very top layer, the receptive fields are so large that they cover nearly the entire image and there is little location information left. That information accounted for $74\%-64\%=10\%$ of accuracy. 
 
-The poor results may likely have roots in deeper theoretical problems of ECC, discussed in the next section.
-
 Sparsity allows for significant performance increase. The full implementation of  $\argmax \boldsymbol{x} W+\boldsymbol{r}$ with entropy maximization and hebbian learning is as follows
 \begin{lstlisting}
-input $\boldsymbol{x}$ is array [$i$ : $x_i=1$]
-for $0 < j \le m$ do $s_j$ := $r_j$ 
-for $i$ in $\boldsymbol{x}$ do for $0 < j \le m$ do $s_j$ := $s_j+w_{ij}$
-$k$ := 0
-for $0 < j \le m$ do if $s_j > s_k$ then $k$ := $j$
-$r_j$ := $r_j-\epsilon$
-for $i$ in $\boldsymbol{x}$ do $w_{ik}$ := $w_{ik}+\epsilon$
-$h$ := 0
-for $0 < j \le m$ do $h$ := $h+w_{jk}*w_{jk}$
-$h$ := $\sqrt{h}$
-for $0 < j \le m$ do $w_{jk}$ := $w_{jk}/h$
+	input $\boldsymbol{x}$ is array [$i$ : $x_i=1$]
+	for $0 < j \le m$ do $s_j$ := $r_j$ 
+	for $i$ in $\boldsymbol{x}$ do for $0 < j \le m$ do $s_j$ := $s_j+w_{ij}$
+	$k$ := 0
+	for $0 < j \le m$ do if $s_j > s_k$ then $k$ := $j$
+	$r_j$ := $r_j-\epsilon$
+	for $i$ in $\boldsymbol{x}$ do $w_{ik}$ := $w_{ik}+\epsilon$
+	$h$ := 0
+	for $0 < j \le m$ do $h$ := $h+w_{jk}*w_{jk}$
+	$h$ := $\sqrt{h}$
+	for $0 < j \le m$ do $w_{jk}$ := $w_{jk}/h$
 \end{lstlisting}
 The total number of steps is $m+m\lVert \boldsymbol{x}\rVert+m+\lVert \boldsymbol{x}\rVert+m+m + O(1)=4m+(m+1)\lVert \boldsymbol{x}\rVert + O(1)$ of which there are $m+(m+1)\lVert \boldsymbol{x}\rVert$ additions, $1$ subtraction, $m$ divisions, $m$ multiplications and $m$ comparisons on floating points. Zero-order networks do not require multiplication. Convolutional networks can optimize $\boldsymbol{x} W$ by computing XY coordinate of pixel $x_i$ directly from its index $i$ and then only perform summation of the surrounding $w_{ij}$, thus $m\lVert \boldsymbol{x}\rVert$ is replaced by $ck^2\lVert \boldsymbol{x}\rVert$ where $c$ is number of channels, $k$ is the kernel size and $ck^2$ is much smaller than $m$. We assume $\lVert \boldsymbol{x}\rVert$ is negligible, hence complexity is $O(m)$. Rust implementation  was able to process 2000 MNIST images per second on a single thread of 2.7 GHz Intel i5 core. Each image was random patch of 25x25 pixels. The network had 734400 weights. When learning was enabled, it could train on 1700 images per second. 
 
-\subsection{Generalization of ECC networks} 
-The model introduced so far suffers from certain significant issues. Without entropy maximization the networks do not learn well, but using it defeats the purpose of out of distribution learning, as all $p(y_j)$ must become equal. From a biological perspective, ECC networks also fail to explain what would happen if a certain $y_j$ neuron was connected to two inhibitory $e_1$, $e_2$ units at once. If $y_j$  could only activate when it is the winner among both $e_1$ and $e_2$ simultaneously, then it's probability $p(y_j)$ must be significantly lower, which causes entropy maximization to collapse. This poses a significant theoretical hole  that this section seeks to fill. Perhaps it holds the key to better practical results. It is an elegant generalization of ECC networks, which also happens to be a little more biologically accurate.
+\fi
 
-\subsubsection{Soft winner-takes-all mechanism} 
-Let $\boldsymbol{s}=\boldsymbol{x} W$ and $V\in \{0,1\}^{m\times m}$. 
- We say that $y_j$ is shunned by $y_k$ if and only if  $v_{kj}=1$, $y_k=1$ and $s_k>s_j$. We define $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$. The algorithm for computing full vector $\boldsymbol{y}$ is as follows
-\begin{lstlisting}
-initialize $y_k=\emptyset$ for all $k$
-while $\emptyset\in \boldsymbol{y}$
-    find $k$ of the highest value $s_k$ such that $y_k=\emptyset$
-    for all $j$ such that $v_{kj}=1$ and $s_j<s_k$
-        $y_j=0$ 
-    $y_k=1$
-\end{lstlisting}
-I call this algorithm \textit{soft-winner-takes-all} (soft-WTA).
-It is not possible to compute bits of $\boldsymbol{y}$ in parallel (unless we use spiking networks and simulate $\boldsymbol{s}$ as spike latencies in continuous time). 
+\section{Temporary scratch notes with further research ideas}
 
- Consider transitive $V$, meaning that if $v_{kj}=1$ and $v_{lk}=1$ then $v_{lj}=1$. Then it becomes possible to evaluate all bits independently and in parallel (on a digital computer) because  $y_{k}$ could be $0$ only if there exists some other $y_l=1$ that shunned it.
-\begin{lstlisting}
-for every $j$
-    $y_j=0$ if $\exists_k v_{kj}=1 \wedge s_j<s_k$ otherwise $y_j=1$
-\end{lstlisting}
-$V$ is reflexive if $v_{jj}=1$ for all $j$, but reflexivity does not change the outcome because $s_j > s_j$ is always false. $V$ is  symmetric when  $v_{jk}=v_{kj}$. If $V$ is transitive, symmetric and (optionally) reflexive then $V$ becomes an equivalence relation on $y$. Then the algorithm simplifies to
-\begin{lstlisting}
-for every equivalence class $e$
-    find $k = \argmax s_i$ over all $i \in e$
-    $y_k=1$ 
-    for all $i\in e$ where $i\ne k$
-        $y_i=0$ 
-\end{lstlisting}
-Let us call this algorithm \textit{hard-WTA}.
-It can be seen that multilayer convolutional ECC networks are equivalent to hard-WTA (thus, general soft-WTA does no require the network topology to be strictly arranged into layers, analogically as the real brain).
-When all entries of $V$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, which corresponds to an ECC network with a single ``inhibitory neuron''. 
+\subsection{Optimal clustering maximizes $p(\boldsymbol{x}|y_k)$} 
+The effectiveness of neurons depends on their ability to maximize $q(\boldsymbol{x}|y_j)$ for all inputs that belong to a given cluster $\boldsymbol{x}\in C(y_j)$ and minimize $q(\boldsymbol{x}|y_j)$ for those that don't  $\boldsymbol{x}\notin C(y_k)$. In an ideal case $q(\boldsymbol{x}|y_j)$ would be $0$ for all $\boldsymbol{x}\notin C(y_j)$. 
 
-\subsubsection{Causality models of soft- and hard-WTA}
+The $Q$ matrix is not capable of fitting every distribution $q(\boldsymbol{x}|y_k)$.
+If we assume that
+\[
+C(y_j) = \{\boldsymbol{x}:j=\argmax \boldsymbol{x}W\}
+\]
+then the network could use $W$ matrix to optimally cluster $\boldsymbol{x}$ in a way that makes the task of fitting $q(\boldsymbol{x}|y_j)$ easier for $Q$. If we can show
+\[
+\boldsymbol{x}W_j \le \boldsymbol{x}W_h  \implies  \boldsymbol{x}Q_j \le \boldsymbol{x}Q_h 
+\]
+then it would imply that maximization of $\boldsymbol{x}W_j$ leads to higher overlap
+$\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. If most inputs $\boldsymbol{x}\in C(y_j)$ share many bits in common, then $Q_j$ can better fit $p(\boldsymbol{x}|y_j)$ by assigning higher probabilities only to those highly frequent bits and near-zero everywhere else. This leads to agreement between $p$ and $q$. 
+
+\subsection{Higher-order networks}
+
+The distribution $q(\boldsymbol{x})$ is modelled as a sum
+\[
+q(\boldsymbol{x}) = \sum_{j=1}^{m}q(\boldsymbol{x}|y_j)p(y_j) 
+\]
+Such factorization is motivated by the assumption that the external world has many latent causes $y_j$, and every one of them produces noisy observations $x_i$. The real world could potentially be approximated using trillions of latent causes, each one corresponding to some state of the world and objects in it. 
+
+Many of the latent causes will produce similar or nearly identical observations. Could we exploit those similarities and compress our model, so that $m$ is as small as possible? 
+
+One way to reduce the number of $y$'s is by adding two (or more) of them as follows
+\[
+q(\boldsymbol{x}|y_1) p(y_1)+q(\boldsymbol{x}|y_2) p(y_2) = 
+q(\boldsymbol{x}|y_1\text{ or }y_2) (p(y_1)+p(y_2))
+\]
+but storing $q(\boldsymbol{x}|y_1\text{ or }y_2)$ directly is impossible, because $Q$ can only be used to represent mutually independent bits $x_i$. 
+\[
+\frac{q(\boldsymbol{x}|y_1;Q_1) p(y_1)+q(\boldsymbol{x}|y_2;Q_2) p(y_2)}{p(y_1)+p(y_2)} \ne 
+q\big(\boldsymbol{x}|y_1\text{ or }y_2;\frac{Q_1p(y_1) +Q_2p(y_2)}{p(y_1)+p(y_2)}\big) 
+\]
+The first-order ECC networks modelled the conditional distribution $q(\boldsymbol{x}|y_1)$ as
+\[
+q(\boldsymbol{x}|y_1) = \prod_{i=1}^{n}q(x_i|y_1)
+\]
+Second-order networks are allowed to model distribution $q(\boldsymbol{x}|y_1\text{ or }y_2)$. 
+\[
+q(\boldsymbol{x}|y_1\text{ or }y_2) = \prod_{i=1}^{n}q(x_i|y_1) + \prod_{i=1}^{n}q(x_i|y_2)
+\]
+In this case, the network has a single neuron unit ``$y_1\text{ or }y_2$'' that has two ``dendritic segments'' $y_1$ and $y_2$. The neuron will activate if any of its dendrites is excited. Analogically, third-order ECC have the capacity to model $q(\boldsymbol{x}|y_1\text{ or }y_2\text{ or }y_3)$. 
+\[
+q(\boldsymbol{x}|y_1\text{ or }y_2\text{ or }y_3) = \prod_{i=1}^{n}q(x_i|y_1) + \prod_{i=1}^{n}q(x_i|y_2) + \prod_{i=1}^{n}q(x_i|y_3)
+\]
+Higher-order networks are allowed to ``factor out'' certain common bits. For example suppose $n=2$, then we could model $y_*$ as a mix of $y_1$, $y_2$ and $y_3$ with additional assumption of the equality $q(x_1|y_1)=q(x_1|y_2)$
+\[
+q(\boldsymbol{x}|y_*) = q(x_1|y_1)\big(q(x_2|y_1) +q(x_2|y_1)\big) + q(x_1|y_3)q(x_2|y_3)
+\]
+More generally, a higher-order network is the union of $1,2,3...$-order networks with equality constraints of the form $q(x_{i_1}|y_{j_1})=q(x_{i_2}|y_{j_2})$. Factoring out common bits leads to equations with a tree-like nested structure of brackets. This could be used to model dendritic trees of biological neurons. 
+
+\subsection{Causality models of soft- and hard-WTA}
 In biological networks, neurons can be either inhibitory or excitatory. Spiking networks simultaneously simulate both types in continuous time, albeit differential equations of inhibitory neurons typically use a faster timescale. 
 
 In discrete-time models, we attempt to expose the causality of spikes in a more explicit form. Should the excitatory neurons $\boldsymbol{y}$ fire first, then causing inhibitory $\boldsymbol{e}$ to fire second and finally leading to lateral inhibition of slower $\boldsymbol{y}$ neurons? This is the chain of causality represented by ECC networks (fig. \ref{fig:ecc_graphical_models}). An alternative view is that excitatory $\boldsymbol{x}$ causes inhibitory $\boldsymbol{y}$ to fire and then the winning  $\boldsymbol{y}$ immediately shun slower  $\boldsymbol{y}$ via  $V$, where $v_{kj}=1$ represents inhibitory connection from $y_k$ to $y_j$. This chain of causality is represented by soft-WTA. Excitatory neurons $y_k$ could simultaneously reside in $\boldsymbol{y}$ but their entries $v_{kj}$ would be zero for all $j$.  The values of $\boldsymbol{s}=\boldsymbol{x} W$ could be interpreted as latency coding. Higher $s_j$ corresponds to higher (momentary) frequency and lower latency. 
 
-\subsubsection{Sums $s_j,s_k$ represent similarity of $W_j,W_k$ weight columns}
-Let $\boldsymbol{s}=\boldsymbol{x} W$. The product $s_j s_k$ is a proxy for determining
-\[
-\mathbb{E}(s_j s_k) =  \mathbb{E}(\boldsymbol{x} W_j \boldsymbol{x} W_k)=  \mathbb{E}(W_j^T \boldsymbol{x}^T  \boldsymbol{x} W_k) = W_j^T \mathbb{E}(\boldsymbol{x}^T  \boldsymbol{x}) W_k = W_j^T C W_k 
-\]
-where $C=\mathbb{E}(\boldsymbol{x}^T  \boldsymbol{x})$ is the ``correlation'' matrix. In the case of sparse binary vectors it would be undesirable to say that $x_h,x_i$ are correlated if they are always silent together $x_i=x_h=0$. Therefore  $C$ is not a correlation according to ``classical'' definition (but would be if we first whitened $\boldsymbol{x}$). 
-In the special case where all bits are uncorrelated $C=I$, we obtain cosine similarity $\mathbb{E}(s_j s_k)=W_j^TW_k$ of weight columns. From the  perspective of k-means algorithm, the expected $s_j s_k$ can be used to identify closely neighbouring centroids $p(\boldsymbol{x}|y_j)$ and $p(\boldsymbol{x}|y_k)$. 
 
-Similarly, the difference $s_j-s_k$ represents
-\[
-(s_j - s_k)^2 = \boldsymbol{x} (W_j - W_k) \boldsymbol{x} (W_j - W_k) = (W_j - W_k)^T \boldsymbol{x}^T \boldsymbol{x} (W_j - W_k) 
-\]
-The second moment of $s_j-s_k$ gives us
-\[
-\mathbb{E}\big((s_j - s_k)^2\big) = (W_j - W_k)^T C (W_j - W_k)
-\]
-\[
-\sqrt{\mathbb{E}\big((s_j - s_k)^2\big)} = \sqrt{(W_j - W_k)^T C (W_j - W_k) }
-\]
-In the special case when bits are decorrelated $C=I$ we have
-\[
-\sqrt{\mathbb{E}\big((s_j - s_k)^2\big)} = dist_{euclidean}(W_j,W_k)
-\]
-
-
-
-\subsubsection{Real-valued generalization of soft-WTA}
-
-Consider $U \in \mathbb{R}^{m\times m}$. Suppose that $0\le s_j\le 1$, which holds if columns $W_j$ are normalized to $a_j=1$ and $\boldsymbol{s}=\boldsymbol{x} W$. 
-We say that $y_j$ is shunned by $y_k$ if  $s_j+u_{kj}<s_k$ and $y_k=1$. We define $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$. Let us refer to this as \text{real-valued soft-WTA}.
-
-If we introduce vector $\boldsymbol{r}\in \mathbb{R}^m$ and put $u_{kj}=r_j-r_k$, then real-valued soft-WTA becomes equivalent to entropy maximization. 
-
-If we introduce matrix $V=1-U$, then real-valued soft-WTA becomes a generalization of binary-valued soft-WTA. To show this we need to consider $v_{kj} \in \{0,1\}$. If $v_{kj}=1$ then $u_{kj}=0$ and $s_j+u_{kj}=s_j<s_k$. If $v_{kj}=1$ then $u_{kj}=1$ and is $s_j+u_{kj}<s_k$ always false because $s_k \le  1$. 
-
-In the general case, continuous values of $U$ can be adjusted independently (without $\boldsymbol{r}$) using local Hebbian rules to approximate $u_{kj}=\mathbb{E}(s_k-s_j)$,  $u_{kj}=\mathbb{E}(|s_k-s_j|)$, $u_{kj}=\mathbb{E}(s_ks_j)$. Each approach is discussed in depth below. 
-
-
-\subsubsection{Soft-WTA from SFA perspective}
+\subsection{Soft-WTA from SFA perspective}
 Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we state that learning $U$ is the problem of minimizing ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
-
-\subsubsection{Learning soft-WTA $U$ weights}
-\iffalse
-Let us recall that the entropy maximization algorithm  is based on
-\[	
-p(\argmax_j s_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
-\]
-which assumes that all variables $s_j$ are independent. Soft-WTA relaxes this assumption and models probabilities conditional on latent $\boldsymbol{y}$. 
-\[
-p(y_k) \approx \int_{z}p(s_k=z) \prod_{j\ne k} \big(p(s_j+u_{kj}<z|y_j)p(y_j)+p(\neg y_j)\big) dz
-\] 
-We know that $\boldsymbol{y}$ is uniquely determined by $\boldsymbol{s}$ but the formula above considers $p(y_j)$ and $p(s_k=z)$, as if $\boldsymbol{y}$, $\boldsymbol{s}$ were both random variables. The reason for this is simplification. The interactions between bits of $\boldsymbol{y}$ are too complex to express $p(y_k)$ exactly. 
-\fi
-Consider minimization of the MSE loss function
-\[
-\sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
-\]
-The probability $p(y_j\text{ shunned by } y_k)$ is equal to
-\[
-p(s_j+u_{kj}<s_k \wedge y_k=1) = p(y_k)p(s_j+u_{kj}<s_k|y_k)
-\]
-The optimal solution to our loss function is the expected value
-\[u_{kj}=\mathbb{E}(s_k-s_j|y_k)\]
-
-This ensures that $u_{kj}$ is ``just low enough'' to satisfy $s_j+u_{kj}<s_k$.
-It achieves a regularization effect similar to entropy maximization. It is impossible for a certain $y_j$ to have $p(y_j)=0$ because then for all $y_k$ we would get
-$p(s_j+u_{kj}<s_k|y_k)=1$ meaning that $u_{kj}<s_k-s_j$ is always true and $u_{kj}$ is below it's expected value, thus leading to contradiction. Analogically it is also impossible for a neuron to always be active  $p(y_j)=0$. 
-
-Empirically soft-WTA converges and produces complex patterns not only when $u_{kj}=\mathbb{E}(s_k-s_j|y_k)$ but also for $u_{kj}=\mathbb{E}(\lvert s_k-s_j\rvert  |y_k)$, $u_{kj}=\mathbb{E}( s_k s_j |y_k)$ and possibly others. It remains an open question how those different settings relate to each other, why they converge and whether one of them could hold the key to outperforming deep nets in more complex tasks than MNIST recognition.
 
  
 
-\subsubsection{Soft-WTA with $u_{kj}=\mathbb{E}(|s_k-s_j|)$ from high-dimensional k-means perspective}
+\subsection{Soft-WTA with $u_{kj}=\mathbb{E}(|s_k-s_j|)$ from high-dimensional k-means perspective}
 The traditional form of k-means algorithm operates in euclidean space. It is possible to reformulate soft-WTA using $\ell_2$ distance metric. 
 
-Suppose there are several mean points $W_1,W_2,...W_m\in \mathbb{R}^n$. The ``standard'' k-means classifies new observations $\boldsymbol{x}\mathbb{R}^n$ by finding the closest mean $\argmin_j \mu(W_j,\boldsymbol{x})$ where $\mu$ is the $\ell_2$ metric. Soft-WTA allows $\boldsymbol{x}$ to match several mean points. We define that $W_j$ is shunned by $W_k$ if $\boldsymbol{x}$ matches $W_k$ and $s_j + u_{kj} < s_k$ where $s_j=\mu(W_j,\boldsymbol{x})$. We define that $\boldsymbol{x}$ matches $W_j$ if and only if there does not exist any $W_k$ that shuns $W_j$. ``Standard'' k-means is equivalent to soft-WTA with all $u_{kj}=0$.
+Suppose there are several mean points $W_1,W_2,...W_m\in \mathbb{R}^n$. The ``standard'' k-means classifies new observations $\boldsymbol{x}\in\mathbb{R}^n$ by finding the closest mean $\argmin_j \mu(W_j,\boldsymbol{x})$ where $\mu$ is the $\ell_2$ metric. Soft-WTA allows $\boldsymbol{x}$ to match several mean points. We define that $W_j$ is shunned by $W_k$ if $\boldsymbol{x}$ matches $W_k$ and $s_j + u_{kj} < s_k$ where $s_j=\mu(W_j,\boldsymbol{x})$. We define that $\boldsymbol{x}$ matches $W_j$ if and only if there does not exist any $W_k$ that shuns $W_j$. ``Standard'' k-means is equivalent to soft-WTA with all $u_{kj}=0$.
 
 As the dimensionality $n$ increases, the possible interactions between means become more complex. The space of observations $\mathbb{R}^n$ might contain a low-dimensional manifold such that $p(\boldsymbol{x})$ is significantly higher within the manifold than outside of it. In order to better classify regions of such manifold, we might want to densely allocate many more mean points $W_j$ around places with high $p(\boldsymbol{x})$. Setting low $u_{kj}$ within those dense cliques,  would allow for fine-grained classification. In higher dimensions, it becomes possible for a single observation $\boldsymbol{x}$ to lie within such a clique, while at the same time match certain distant means. It is also possible to locally perform k-means in several cliques without them interfering with each other globally. It holds a certain resemblance to the spline theory of deep neural networks, which remains to be investigated.
 
@@ -1921,10 +2073,41 @@ As the dimensionality $n$ increases, the possible interactions between means bec
 In biological neurons, inhibitory long-term potentiation (iLTP) \cite{inhibitory_plasticity} states that synapse ($u_{kj}$) is strengthened when presynaptic interneuron fires ($y_k=1$) and postsynaptic neuron is depolarized (high $s_j$) but does not fire ($y_j=0$). 
 \fi
 
+\subsection{Spike-time-dependent plasticity} 
 
+So far we've been only able to process binary vectors. 
+Consider now a generalization $\boldsymbol{x}\in\mathbb{R}^n$ that uses latency-coding.
+Each value $x_i$ represents time at which the $i$-th input neuron spiked. The task is to determine times $\boldsymbol{y}$ at which each output neuron should fire in response. The
+entire process must be time-invariant, so that if we add some constant $t_0$ to input $t_0+\boldsymbol{x}$ then the
+output timings change accordingly to $t_0+\boldsymbol{y}$. 
+The absolute values $\boldsymbol{x}$ are not as important as the relative timing of spikes, therefore let us define relative input $\boldsymbol{x}^(r)$  as
+\[
+\boldsymbol{x}^(r) = \boldsymbol{x} - \min(\boldsymbol{x})
+\]
+The first (earliest) spike occurs at time $0$ and all other spikes are greater than $0$. Analogically let $y_j^(r)$ be the relative timings of outputs 
+\[
+\boldsymbol{y}^(r) = \boldsymbol{y} - \min(\boldsymbol{x})
+\]
 
+The earliest spike carries the most information. The decay of action potential is exponential. If $j$-th output fires at $y_j$ then the influence of $i$-th input is proportional to $\exp (x_i^{(r)} - y_j^{(r)})$, assuming that $x_i^{(r)} \le y_j^{(r)}$.  We do not know $y_j^{(r)}$. Let's assume that for each $\boldsymbol{x}$ there is some $y_k$ that spikes first in response.  
 
+By converting 
 
+Let us recall the ECC network algorithm
+\begin{lstlisting}
+initialize $\boldsymbol{r}=\boldsymbol{0}\in \mathbb{R}^m$
+repeat forever
+    receive next input $\boldsymbol{x}\in \{0,1\}^n$
+    $\boldsymbol{s} = \boldsymbol{x}W$
+    $k = \argmax \boldsymbol{r} + \boldsymbol{s}$
+    $r_k := r_k - \epsilon$ 
+    output $\boldsymbol{y} = \mathbb{1}_k$
+\end{lstlisting}
+where $W\in\mathbb{R}^{n\times m}$ are feed-forward weights, $\epsilon$ is some small constant and $\mathbb{1}_k$ is a one-hot vector with bit $1$ at position $k$.
+
+We can observe that soft-WTA mechanism is a generalization of $\argmax$. It takes $\boldsymbol{s}$ as input, produces binary (not necessarily one-hot) vector $\boldsymbol{y}$ and achieves entropy maximization using $U$ instead of $\boldsymbol{r}$. One thing that soft-WTA does \textbf{not} do is tell us how to produce $\boldsymbol{s}$. When $\boldsymbol{s}$ happens to be $\boldsymbol{x}W$ then $U$ could be trained with respect to the cosine similarity $s_j s_i$ (as in \ref{subsection:s_j_s_k_is_cos_sim}). Let us now investigate an alternative approach to computing $\boldsymbol{s}$. 
+
+Su
  
 
 
