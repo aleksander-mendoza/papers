@@ -604,7 +604,7 @@ Tolman-Eichenbaum machine is a general architecture that can be applied to learn
 
 \chapter{Geometry of reinforcement learning}
 
-The main results of this thesis are heavily reliant on all the preliminaries introduced in previous sections. Geometric deep learning provided us with a rigorous framework for explaining the success behind deep neural networks. Nearly all modalities such as computer vision, speech recognition, natural language processing, etc. could be (for the most part) considered as ``solved''. Geometric priors gave us a tool for addressing the curse of dimensionality.
+Geometric deep learning provided us with a rigorous framework for explaining (some of) the success behind deep neural networks. Nearly all modalities such as computer vision, speech recognition, natural language processing, etc. could be (for the most part) considered as ``solved''. Geometric priors gave us a tool for addressing the curse of dimensionality.
 The notable outlier is the deep reinforcement learning, which has had a limited applicability in real-world scenarios. I would like to make the argument that sample inefficiency has many similarities to the curse of dimensionality. Algebraic symmetries may likely once again prove to be the key. While I cannot yet provide a functioning solution to the problem, I wish to share my insights, supported by mathematical arguments and ``proof of concept'' experiments. 
 
 \section{Sample inefficiency and symmetries}
@@ -661,7 +661,10 @@ p^*(s, a_1 ... a_n) = \begin{cases}
 \end{equation*}
 (note the analogy to $\delta^*$ in automata theory)
 
-Such geometric priors could narrow down the search space of $p$  for model-based learning and speed up convergence of $v$ for model-free value methods. For example consider $S=\langle a_1,a_2 | a_1a_1=a_2 \rangle$ then in
+Such geometric priors could narrow down the search space of $p$  for model-based learning and speed up convergence of $v$ for model-free value methods. 
+
+\begin{example}
+Consider $S=\langle a_1,a_2 | a_1a_1=a_2 \rangle$ then in
 \[
 \pi(a_2|s)\big(R(sa_2)+\gamma v_\pi(sa_2)\big)+\pi(a_1^2|s)\big(R(sa_1)+\gamma R(sa_1^2)+\gamma^2 v_\pi(sa_1^2))\big) 
 \]
@@ -678,19 +681,77 @@ where
 R(sa_1^2+sa_2)=\pi(a_2|s)R(sa_2)+\pi(a_1^2|s)(R(sa_1)+\gamma R(sa_1^2))
 \]
 The Bellman equation $v_\pi(s) = \sum_{a\in A} \pi(a|s)(R(sa)+\gamma v_\pi(sa))$ can be simplified analogically.
+\end{example}
 
-The current deep learning approaches are naive. They treat $S$ as a decision tree $A^*$ that lacks any symmetries. What type of deep architecture are we missing, that could address this problem? Most likely no such architecture exists, for the simple reason that symmetries in the action space are dynamic, can change with the environment (e.g. humans/animals playing video games) and are usually not (fully) known a priori (the details are discussed in section \ref{subsection:group_manifolds}). This stands in stark contrast with symmetries in the signal space, which can be given a priori and do not need to change over time.
+The current deep learning approaches are naive. They treat $S$ as a decision tree $A^*$ that lacks any symmetries. What type of deep architecture are we missing, that could address this problem? Most likely no such architecture exists, for the simple reason that symmetries in the action space are dynamic, can change with the environment (e.g. humans/animals playing video games) and are usually not (fully) known a priori. This stands in stark contrast with symmetries in the signal space, which can be given a priori and do not need to change over time.
 
 
 \section{Inductive inference of groups}
 \label{subsection:inductive_inference_of_groups}
 Theory of inductive inference \cite{deLaHiguera,SOLOMONOFF19641} studies how certain unknown mechanisms can be guessed by observing their behavior, such as outputs (in case of functions) or member elements (in case of sets). The theory defines an important notion of \textit{learnability in the limit}. Traditionally, it has been focused on learning formal grammars and finite state automata by observing strings belonging to their formal languages. Let us shortly review it, before we extend this theory to groups. 
 
-Formal language $L$ over alphabet $A$ is a set of strings $L\subset A^*$. Presentation $\phi$ of a non-empty set $\mathcal{X}$ is an enumeration $\phi:\mathbb{N}\rightarrow \mathcal{X}$ of all its elements $\phi(\mathbb{N})=\mathcal{X}$. We refer to $\phi$ as \textit{text} when $X=A^*$ and as \textit{informant} when $X=A^*\times \{0,1\}$. Let $\mathcal{L}$ be a class of languages.
- $Pres(\mathcal{L})=\{\phi:\mathbb{N}\rightarrow A^* : \phi(\mathbb{N}) = L \in \mathcal{L}\}$ is the set of all presentations of all languages in $\mathcal{L}$. Text only consists of positive examples $w\in L$, whereas informant has both positive $(w,1) \in L \times \{1\}$ and negative $(w,0) \in \bar{L} \times \{0\}$ examples. Grammar or automaton $G$ is a representation of some language $L$. We use $\mathbb{L}(G)=L$ to denote that $L$ is represented by $G$. Let $\mathcal{G}$ be a class of grammars (or automata) and $\mathbb{L}(\mathcal{G})=\mathcal{L}$ the corresponding class of languages. Learning algorithm $\mathcal{A}:Pres(\mathcal{L})\rightarrow\mathcal{G}$ is a function that takes the first $n$ elements of presentation $\phi$ as input (those are the observed strings from $L$) and returns a learned (inferred) grammar $G$. Language $L$ is learnable in the limit if there exists some $\mathcal{A}$ such that for all $\phi$, exists $n_0$ such that $\mathbb{L}(\mathcal{A}(\phi))=L$ for all $n \ge n_0$.  
-
-Instead of inferring formal languages $L$ and automata $G$, we could infer groups $S$ and their presentations $\langle A|\mathcal{R} \rangle$. To avoid confusion, let us from now on use the term \textit{trajectory} instead \textit{presentation} when referring to $\phi$. The agent moves in environment $S$ and its trajectory $\phi:\mathbb{N}\rightarrow S \times A$ is the states visited along the way $\phi(t)=(S_t,A_t)$. When $\phi$ is an informat, then it also includes information about reward. My claim is that finitely-presented groups are learnable in the limit, and the learning algorithm is as follows.
-
+\begin{definition}
+Formal language $L$ over alphabet $A$ is a set of strings $L\subset A^*$.
+\end{definition}
+\begin{definition}
+Presentation of a non-empty set $X$ is a function $\phi:\mathbb{N}\rightarrow X$ that enumerates all of $X$'s elements $\phi(\mathbb{N})=X$.
+\end{definition}
+\begin{definition}
+Text $TEXT(L)$ is a presentation of formal language $L \subset A^*$.
+\end{definition}
+\begin{definition}
+Informant $INFORMANT(L)$ is a presentation of the set $X \subset A^*\times \{0,1\}$ such that $(w,1) \in X$ if and only if  $w \in L$ and $(w,0) \in X$ if and only if $w \notin L$. (In other words $INFORMANT(L)$ is the presentation of the coproduct of $L$ and its complement $\overline{L}$.)
+\end{definition}
+Let $\mathcal{L}\subset 2^{A^*}$ be a class of languages (set of sets of strings over alphabet $A$). 
+\begin{definition}
+$Pres(\mathcal{L})=\{\phi:\mathbb{N}\rightarrow A^* : \phi(\mathbb{N}) = L \in \mathcal{L}\}$ is the set of all presentations of all languages in $\mathcal{L}$.
+\end{definition}
+Let $\mathcal{G}$ be a set and $\mathbb{L}:\mathcal{G}\rightarrow\mathcal{L}$ a function that is onto.
+\begin{definition}
+Element $G\in \mathcal{G}$ is a representation of language $L$ if $\mathbb{L}(G)=L$.
+\end{definition}
+\begin{definition}
+Learning algorithm $\mathcal{A}:\mathbb{N} \times Pres(\mathcal{L}) \rightarrow \mathcal{G}$ is a function that takes the first $n$ observations (elements) of presentation $\phi$ as input and infers (returns) a grammar $G=\mathcal{A}(n, \phi)$.
+\end{definition}
+In most learning setups $\mathcal{G}$ is the set of grammars or automata. Text consists of positive examples $w \in L$, whereas informant has both positive $(w,1) \in L \times \{1\}$ and negative $(w,0) \in \bar{L} \times \{0\}$ examples. The learning algorithm $\mathcal{A}$ reads the first $n$ examples and computes a grammar or automaton that fits the positive observations and (in case of informant) excludes the negative ones.
+\begin{example}
+If $\mathcal{G}$ is the set of finite state automata (or regular expressions) then $\mathcal{L}$ is the set of regular languages. The \textit{regular positive and negative inference} (RPNI) \cite{deLaHiguera} algorithm ($\mathcal{A}$) is capable of learning regular languages from informant. Learning regular languages from text (using positive examples only) is known to be impossible. 
+\end{example}
+\begin{definition}
+Language $L$ is learnable in the limit if there exists some $\mathcal{A}$ such that for all $\phi$, exists $n_0$ such that $\mathbb{L}(\mathcal{A}(n, \phi))=L$ for all $n \ge n_0$.  
+\end{definition}
+Instead of inferring formal languages $L$ and automata $G$, we could infer groups $S$ and their presentations $\langle A|\mathcal{R} \rangle$. The following definitions below are new and introduced in this thesis.
+To avoid confusion, let us from now on use the term \textit{trajectory} instead \textit{presentation} when referring to $\phi$ in the context of groups. 
+\begin{definition}
+Trajectory in a group $S$ is a function $\phi : \mathbb{N} \rightarrow S \times A$ satisfying
+\begin{enumerate}
+	\item if $\phi(t)=(S_t,A_t)$ then $\phi(t+1)=(S_{t+1},A_{t+1})$ and $S_tA_t = S_{t+1}$   (temporal consistency axiom)
+	\item $\phi(\mathbb{N}) = S \times A$ (completeness axiom)
+\end{enumerate}
+\end{definition}
+\begin{definition}
+Informant in a group $S$ is a function $\phi : \mathbb{N} \rightarrow S \times A \times R$ satisfying
+\begin{enumerate}
+	\item if $\phi(t)=(S_t,A_t, R_t)$ then $\phi(t+1)=(S_{t+1},A_{t+1},R_{t+1})$ and $S_tA_t = S_{t+1}$   (temporal consistency axiom)
+	\item for every $s\in S$ and $a\in A$ there exists $t$ such that $\phi(t) = (s,a,R_t)$ (completeness axiom)
+\end{enumerate}
+\end{definition}
+The $R$ is commonly known as reward.
+\begin{definition}
+Presentation $\langle A \vert \mathcal{R} \rangle$ of group $S$ is defined as usual (a set of relations $\mathcal{R}$ which are equalities of words over $A$).
+\end{definition}
+\begin{definition}
+Agent $\mathcal{A}$ is a function that takes the first $t$ steps (elements) of trajectory $\phi$ and infers (returns) a presentation $\langle A \vert \mathcal{R} \rangle=\mathcal{A}(n, \phi)$.
+\end{definition}
+\begin{definition}
+A group $S$ is learnable in the limit if there exists an agent $\mathcal{A}$ such that for all $\phi$, exists $t_0$ such that $\mathcal{A}(t, \phi)=S$ for all $t \ge t_0$.  
+\end{definition}
+The agent moves in environment $S$ and its trajectory $\phi$ are the states visited along the way. 
+When $\phi$ is an informat then it also includes information about reward. 
+\begin{theorem}
+Finitely generated groups are learnable in the limit. \label{theorem:finitely_presented_groups_are_learnable}
+\end{theorem}
+\begin{proof}
 Define $s\in S_{<n}$ if and only if $\phi(t)=(s,a)$ for some $t< n$ and $a$. For every pair of states $s,s' \in S_{<n}$ let $R_{ss'}^{(1)}$ be the set of all $a$ such that $S_tA_t=S_{t+1}$ where $A_t=a$, $S_t=s$, $S_{t+1}=s'$. Let $R_{ss'}^{(n)}$ be defined recursively as (matrix multiplication formula)
 \[
 R_{ss''}^{(i+1)} = \bigcup\limits_{s'\in S_{<n}} R_{ss'}^{(i)}R_{s's''}^{(1)}
@@ -704,28 +765,42 @@ The final set $R_{ss'}^{(i)}$ for $i=|S_{<n}|$ yields transitive closure. If $r\
 \[
 \mathcal{R} = \bigcup\limits_{s\in S_{<n}} R_{ss}^{(i)}\text{ where }i=|S_{<n}|
 \]
-This concludes $\mathcal{A}$.
+This defines the agent $\mathcal{A}$.	
 
 
-Let us now prove that $\mathcal{A}$ learns $S$ in the limit. By assumption, $S$ is finitely presented and the image $\phi(\mathbb{N})=S \times A$ covers all edges in the Cayley graph of $S$ (recall that $A$ contains inverses $a^{-1}$ too). The transitive closure $R_{ss'}^{(i)}$ contains relators $r$ of length $|r| \le i$. Let $S=\langle A | R^* \rangle$ be the true presentation of $S$. All relators in $R^*$ must be shorter than $|S|$ (or finite if $S$ is infinite) or otherwise they would contain a subword equal to $e$, which could be removed. As $n$ goes to infinity, $i=|S_{<n}|$ approaches $|S|$ and all relators of $r\in R^*$ will eventually be observed in $\phi$. Let $r=a_1a_2...a_k$ and let $\phi$ contain $t_1,t_2,...,t_k<n$ such that $A_{t_j}=a_j$ and $S_{t_j}=S_{t_{j+1}}$ for $1\le j < k$. Then $r=e$ implies $S_{t_1}=S_{t_{k}+1}$, let it be $s$. Thus $r\in R^{(k)}_{ss}$. Note that $r\in R^{(k)}_{ss}=R^{(k)}_{ss}R^{(1)}_{ss} \subset R^{(k+1)}_{ss}$, hence $r\in R^{(i)}_{ss} \subset \mathcal{R}$. Note that there cannot be any $r\in \mathcal{R}$ that is not equal $e$ in $S$, but some $r\in \mathcal{R}$ may be redundant and could be removed using Tietze transformations. In the general case deciding which relations can be removed is equivalent to solving the word problem and is undecidable. Fortunately, it does not affect learning in the limit, as all the presentations are equivalent, and we do not need to perform the Tietze transformations. Therefore once we find $ \mathcal{R}$ that is equivalent to $ \mathcal{R}^{*}$, it is impossible to lose a relator or add one that would make $ \mathcal{R}$ non-equivalent again. This concludes the proof.
+Let us now prove that $\mathcal{A}$ learns $S$ in the limit. By assumption, $S$ is finitely presented and the image $\phi(\mathbb{N})=S \times A$ covers all edges in the Cayley graph of $S$ (recall that $A$ contains inverses $a^{-1}$ too). The transitive closure $R_{ss'}^{(i)}$ contains relators $r$ of length $|r| \le i$. Let $S=\langle A | R^* \rangle$ be the true presentation of $S$. All relators in $R^*$ must be shorter than $|S|$ (or finite if $S$ is infinite) or otherwise they would contain a subword equal to $e$, which could be removed. As $n$ goes to infinity, $i=|S_{<n}|$ approaches $|S|$ and all relators of $r\in R^*$ will eventually be observed in $\phi$. Let $r=a_1a_2...a_k$ and let $\phi$ contain $t_1,t_2,...,t_k<n$ such that $A_{t_j}=a_j$ and $S_{t_j}=S_{t_{j+1}}$ for $1\le j < k$. Then $r=e$ implies $S_{t_1}=S_{t_{k}+1}$, let it be $s$. Thus $r\in R^{(k)}_{ss}$. Note that $r\in R^{(k)}_{ss}=R^{(k)}_{ss}R^{(1)}_{ss} \subset R^{(k+1)}_{ss}$, hence $r\in R^{(i)}_{ss} \subset \mathcal{R}$. Note that there cannot be any $r\in \mathcal{R}$ that is not equal $e$ in $S$, but some $r\in \mathcal{R}$ may be redundant and could be removed using Tietze transformations. In the general case deciding which relations can be removed is equivalent to solving the word problem and is undecidable. Fortunately, it does not affect learning in the limit, as all the presentations are equivalent, and we do not need to perform the Tietze transformations. Therefore once we find $ \mathcal{R}$ that is equivalent to $ \mathcal{R}^{*}$, it is impossible to lose a relator or add one that would make $\mathcal{R}$ non-equivalent again.
+\end{proof}
 
-It remains to show how this could be used later by the agent to find reward.
-The correct presentation of $S$ could be inferred with even a few examples (depending on luck and size of minimum  presentation). The locations of visited states should be kept in memory. Planning can be achieved by performing \textit{coset enumeration} \cite{johnson_1997}, which is a form of breath-first-search. Even if $S$ is infinite, we could still use coset enumeration to find the shortest path (geodesic word) to a desired destination state, provided that we've visited said state at least once in the past. 
+\begin{definition}
+Planning agent $\mathcal{A}:Pres(S) \times S \times S \rightarrow A^*$ is a function that takes a presentation  $\langle A \vert \mathcal{R} \rangle$ of environment $S$, an initial state $s \in S$, final state $s'\in S$ and returns a word $\mathcal{A}(\langle A \vert \mathcal{R} \rangle, s, s') = w$ such that $sw=s'$.
+\end{definition}
+The correct presentation of $S$ could be inferred (by \ref{theorem:finitely_presented_groups_are_learnable}) after observing very short trajectories (depending on luck and size of minimum  presentation). The locations of visited states should be kept in memory. A planning agent can be built by performing \textit{coset enumeration} \cite{johnson_1997}, which is a form of breath-first-search. Even if $S$ is infinite, we could still use coset enumeration to find the shortest path (geodesic word) to a desired destination state, provided that we've visited said state at least once in the past. 
 
 It is worthwhile to compare the efficiency of this method with temporal difference learning, which requires multiple passes over the same state to converge. Searching through Cayley graph of $S$ can be used to quickly find shortest route to desired destination with some reward, but this may not necessarily be the route that maximizes cumulative reward (more on that later). Inference of groups could hold the key to transfer learning, as many environments with different reward landscapes could share the same underlying group structures. 
 
-\subsection{Inductive inference of monoids}
-\label{subsection:inductive_inference_of_monoids}
 Inference of groups corresponds to continuous reinforcement learning tasks because $\phi$ represents a single infinite walk over $S$.
-Finitely presented monoids such trajectories do not exist in the general case. Consider for example the free commutative monoid $\langle l,r | lr=rl \rangle$. It is impossible to visit any state twice, nor it is possible to find any walk $\phi$ that would be surjective $\phi(\mathbb{N})=S\times A$. For this reason $\phi$ must be sampled with restarting, as in episodic reinforcement learning tasks. Let $\emptyset\notin A$ denote a special action whose occurrence $\phi(t)=(s,\emptyset)$ signals end of current episode and beginning of a new one, starting in $\phi(t+1)=(e,a)$. By convention neutral element $e$ is the initial state.
-
-
-I claim that finitely presented monoids are learnable in the limit.
-$\mathcal{A}$ proceeds as follows. Define $n \in \mathbb{N}$, $S_{<n}$ and $R_{ss'}^{(i)}$ as before, except that $\emptyset$ actions are ignored $\emptyset \notin R_{ss'}^{(i)}$. Define $e \in R_{ss'}^{(0)}$ if $s=s'$ or make it the empty set $\emptyset=R_{ss'}^{(0)}$ otherwise. Define $R_{ss'}^{(<k)}$ as the union $\bigcup_{0 \le t< k} R_{ss'}^{(k)}$. It can be seen that $R_{ss'}^{(< k)}$ holds any (observed) word $w$ of length $0\le|w|< k$ such that $sw=s'$. Relation $w_1=w_2$ could belong to $\mathcal{R}^*$ only if $sw_1=sw_2$ holds for all $s\in S$. If $\mathcal{A}$ observes $sw_1=sw_2$ for some specific $s\in S_{<n}$ then all $\mathcal{A}$ knows is that there exists some $w_3w_1=w_4w_2 \in \mathcal{R}^*$ but the prefixes $w_3,w_4$ remain unknown. Only $R{es'}^{(n)}$ can be used to reliably identify $w_1,w_2$. Therefore we state that the final result $\mathcal{R}$ consists of all the relations $w_1=w_2$ such that $w_1,w_2 \in R_{es'}^{(<n)}$ for some $s'\in S_{<n}$. This concludes the algorithm $\mathcal{A}$. 
+For finitely presented monoids such trajectories do not exist in the general case. 
+\begin{example}
+Consider the free commutative monoid $\langle u,r | ur=ru \rangle$. Cayley graph of this monoid is top right quarter of an infinite grid with each pointing either up $u$ or left $l$. It is impossible to visit any state twice, nor it is possible to find any walk $\phi$ that would be surjective $\phi(\mathbb{N})=S\times A$.
+\end{example}
+ For this reason trajectories of monoids must be sampled with restarting, as in episodic reinforcement learning tasks. Let $\emptyset\notin A$ denote a special action whose occurrence $\phi(t)=(s,\emptyset)$ signals end of current episode and beginning of a new one. 
+\begin{definition}
+Trajectory in a monoid $S$ is a function $\phi : \mathbb{N} \rightarrow S \times (A\cup\{\emptyset\})$ satisfying
+\begin{enumerate}
+		\item if $\phi(t)=(S_t,A_t)$ and $A_t\ne \emptyset$ then $\phi(t+1)=(S_{t+1},A_{t+1})$ and $S_tA_t = S_{t+1}$   (temporal consistency axiom)
+		\item $\phi(\mathbb{N}) = S \times A$ (completeness axiom)
+\end{enumerate}
+\end{definition}
+\begin{theorem}
+Finitely generated monoids are learnable in the limit. \label{subsection:inductive_inference_of_monoids} \label{theorem:finitely_presented_monoids_are_learnable}
+\end{theorem}
+\begin{proof}
+$\mathcal{A}$ proceeds as follows. Define $n \in \mathbb{N}$, $S_{<n}$ and $R_{ss'}^{(i)}$ as before, except that $\emptyset$ actions are ignored $\emptyset \notin R_{ss'}^{(i)}$. Define $e \in R_{ss'}^{(0)}$ if $s=s'$ or make it the empty set $\emptyset=R_{ss'}^{(0)}$ otherwise. Define $R_{ss'}^{(<k)}$ as the union $\bigcup_{0 \le t< k} R_{ss'}^{(k)}$. It can be seen that $R_{ss'}^{(< k)}$ holds any (observed) word $w$ of length $0\le|w|< k$ such that $sw=s'$. Relation $w_1=w_2$ could belong to $\mathcal{R}^*$ only if $sw_1=sw_2$ holds for all $s\in S$. If $\mathcal{A}$ observes $sw_1=sw_2$ for some specific $s\in S_{<n}$ then all $\mathcal{A}$ knows is that there exists some $w_3w_1=w_4w_2 \in \mathcal{R}^*$ but the prefixes $w_3,w_4$ remain unknown. Only $R{es'}^{(n)}$ can be used to reliably identify $w_1,w_2$. Therefore we state that the final result $\mathcal{R}$ consists of all the relations $w_1=w_2$ such that $w_1,w_2 \in R_{es'}^{(<n)}$ for some $s'\in S_{<n}$ (where $e$ is the neutral element). This concludes the algorithm $\mathcal{A}$. 
 
 The proof of learning in the limit is analogical as before.
-It only remains to highlight that coset enumeration can no longer be applied to monoids and a different planning method needs to be devised.
+\end{proof}
 
+Note that coset enumeration can no longer be applied to monoids and a different planning method needs to be devised.
 
 \section{Monoids embedded in Markov decision processes}
 \label{subsection:group_manifolds}
