@@ -1267,6 +1267,8 @@ It is possible to represent $q$ as a ``graphical model'', by introducing a speci
 In order to gain some intuition, let us consider the following example. Image observing a straight metal bar. As it rotates in front of your eyes, it will cast a line-shaped shadow on your retina $\boldsymbol{x}$. We might choose to treat different  rotations as distinct ``events'' and use $y_1...y_4$ to denote the angles $0^{\circ},45^{\circ},90^{\circ},135^{\circ}$ respectively. The bar cannot exist in two positions simultaneously, motivating our earlier assumption of mutual exclusivity. This stands in contrast to rate-coded models, which would instead try to assign some fractional probabilities to different explanations $y$, should the bar find itself in some intermediate position (like $20^\circ$ angle). A similar scenario is observed when looking at Rubin's vase illusion. A rate-coded model might assign 50\% probability to vase and 50\% to face classes, but ECC (and human perception) can only see one.
 
 \section{ECC networks}
+
+\subsection{First-order ECC}
 We presented an intuitive overview of ECC networks. This section is devoted to a fully rigorous treatment.
 
 \begin{definition}
@@ -1399,6 +1401,7 @@ or as expectation of the dot product $\boldsymbol{x}Q$.
 	\mathbb{E}_q(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) = \mathbb{E}(\boldsymbol{x} Q_j | y_j)
 \end{gather*}
 \end{proof}
+\subsection{Convergence and K-means}
 \begin{theorem}
 	\label{theorem:E_x_y_maximizes_xW_under_l2}
 Expected value $\mathbb{E}_{p}(\boldsymbol{x}|y_j)$ maximizes the expected dot product $\boldsymbol{x}W_j$ under $\ell_2$ norm.
@@ -1500,7 +1503,7 @@ and we know that $W_j^{(t+1)}$ maximizes $\mathbb{E}(\boldsymbol{x}W_j^{(t+1)})$
 The second inequality holds, because any two clusters $C^{(t)}(y_j)$ and  $C^{(t+1)}(y_j)$ will differ only when there exists some $\boldsymbol{x}\in C^{(t)}(y_j)$ such that there is some other $y_h$ for which $\boldsymbol{x}W_h \ge \boldsymbol{x} W_j$. This implies that the total sum over all clusters cannot decrease.
 \end{proof}
 	
-	
+\subsection{Incremental ECC and entropy}
 \begin{definition}
 	\textit{Zero-order ECC networks} are first-order networks such that $Q=W$. Then maximization of $\boldsymbol{x}W$ is synonymous with maximization of both $\boldsymbol{x}Q$ and $\mathbb{E}(\langle \boldsymbol{x}, \boldsymbol{x}'\rangle|y_j) $. 
 \end{definition}
@@ -1639,7 +1642,7 @@ repeat forever
 \end{lstlisting}
 \end{definition}
 The implementation of zero-order networks is identical but divides $W_k$ by $\lVert W_k \rVert_1$ instead of $\lVert W_k \rVert_2$ (which is equivalent to computing $W_k:=(1-\epsilon)W_k+\epsilon\frac{\boldsymbol{x}}{ \lVert \boldsymbol{x} \rVert_1}$ because the norm of $ W_k + \epsilon \frac{\boldsymbol{x}}{ \lVert \boldsymbol{x} \rVert_1}$ is a constant which can be absorbed into $\epsilon$ itself). The first order $\ell_1$ networks have to compute both $Q$ and $W$.
-
+\subsection{Convolutional ECC and symmetries}
 \begin{definition}
 	One-dimensional \textit{convolutional ECC network} is an array (finite sequence) of $c$ ECC networks such that the input $\boldsymbol{x}\in \boldsymbol{R}^{n}$ is subdivided into (possibly overlapping) subvectors $\boldsymbol{x}'_0=[x_0,...,x_k]$,
 	$\boldsymbol{x}'_1=[x_s,...,x_{s+k}]$,..., $\boldsymbol{x}'_{c-1}=[x_{(c-1)s},...,x_{(c-1)s+k}]$ with kernel size $k$ and stride $s$ and each subvector is an input to one ECC network. Convolutional network produces output $\boldsymbol{y}\in \{0,1\}^{c\times m}$ with $m$ channels and $c$ columns where each $y'\in \{0,1\}^m$ is produced by one ECC network, also called a \textit{column}.
@@ -1786,11 +1789,12 @@ Producing symmetries with hierarchical structures has been reinvented many times
 
 The model introduced so far suffers from certain significant issues. Without entropy maximization the networks do not learn well, but using it defeats the purpose of out of distribution learning, as all $p(y_j)$ must become equal. From a biological perspective, ECC networks also fail to explain what would happen if a certain $y_j$ neuron was connected to two inhibitory $e_1$, $e_2$ units at once. If $y_j$  could only activate when it is the winner among both $e_1$ and $e_2$ simultaneously, then it's probability $p(y_j)$ must be significantly lower, which causes entropy maximization to collapse. The following model is a generalization of ECC that solves those issues.
 
+\subsection{Soft ECC and correlation}
 \begin{definition}
 Let $\boldsymbol{s}=\boldsymbol{x} W$ and $V\in \{0,1\}^{m\times m}$. 	
 We say that $y_j$ is \textit{shunned} by $y_k$ if and only if  $v_{kj}=1$, $y_k=1$ and $s_k>s_j$. We define soft-winner-takes-all  $\boldsymbol{y}=\swta_V \boldsymbol{s}$ to be an operation returning binary vector $\boldsymbol{y}$ such that $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$.
 \end{definition}
-\begin{theorem}
+\begin{theorem} \label{theorem:algorithm_for_swta}
 Soft-WTA can be computed in polynomial time.
 \end{theorem}
 \begin{proof}
@@ -1836,10 +1840,10 @@ for every equivalence class $e$
 \end{lstlisting}
 \end{proof}
 \begin{definition}
-The algorithm in proof of theorem \ref{theorem:soft_wta_with_equivalence_classes_is_hard_wta} is called \textit{hard-WTA}. All ECC networks presented so far were \textit{hard-ECC networks}.
-ECC networks that use soft-WTA in place of $\argmax$ are called \textit{soft-ECC networks}.
+The algorithm in proof of theorem \ref{theorem:soft_wta_with_equivalence_classes_is_hard_wta} is called \textit{hard-WTA}. All ECC networks presented so far were \textit{hard ECC networks}.
+ECC networks that use soft-WTA in place of $\argmax$ are called \textit{soft ECC networks}.
 \end{definition}
-In general, soft-ECC does no require the network topology to be strictly arranged into layers (and neither does the real brain).
+In general, soft ECC does no require the network topology to be strictly arranged into layers (and neither does the real brain).
 \begin{corollary}
 When all entries of $V$ matrix are $1$, then there can be only one winner $y_k=1$ for $k=\argmax \boldsymbol{s}$, which corresponds to a single-layer non-convolutional ECC network. 
 \end{corollary}
@@ -1897,54 +1901,25 @@ If $s_j+u_{kj}<s_k$ then $s_j+r_j<s_k+r_k$. If $k=\argmax_j s_j+r+j$ then all ot
 Binary-valued soft-WTA is a special case of real-valued soft-WTA. 
 \end{theorem}
 \begin{proof}
-Put $V=1-U$ and consider $v_{kj} \in \{0,1\}$. If $v_{kj}=1$ then $u_{kj}=0$ and $s_j+u_{kj}=s_j<s_k$. If $v_{kj}=1$ then $u_{kj}=1$ and is $s_j+u_{kj}<s_k$ always false because $s_k \le  1$. 
+Put $V=1-U$ and consider $v_{kj} \in \{0,1\}$. If $v_{kj}=1$ then $u_{kj}=0$, hence $s_j+u_{kj}<s_k$ is equivalent to $s_j<s_k$. If $v_{kj}=0$ then $u_{kj}=1$, hence $s_j+u_{kj}<s_k$ is always false because $s_k \le  1$ and $s_j+u_{kj} \ge 1$. 
 \end{proof}
 
 In the general case, continuous values of $U$ can be adjusted independently (without $\boldsymbol{r}$) and incrementally using local Hebbian rules. 
 
-
-Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their ``correlation'' $\mathbb{E}(y_j y_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and decorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, we state that learning $U$ is the problem of minimizing ``correlation'' $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
-
-
-\subsection{Learning soft-WTA $U$ weights}
-\iffalse
-Let us recall that the entropy maximization algorithm  is based on
-\[	
-p(\argmax_j s_j + r_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
-\]
-which assumes that all variables $s_j$ are independent. Soft-WTA relaxes this assumption and models probabilities conditional on latent $\boldsymbol{y}$. 
-\[
-p(y_k) \approx \int_{z}p(s_k=z) \prod_{j\ne k} \big(p(s_j+u_{kj}<z|y_j)p(y_j)+p(\neg y_j)\big) dz
-\] 
-We know that $\boldsymbol{y}$ is uniquely determined by $\boldsymbol{s}$ but the formula above considers $p(y_j)$ and $p(s_k=z)$, as if $\boldsymbol{y}$, $\boldsymbol{s}$ were both random variables. The reason for this is simplification. The interactions between bits of $\boldsymbol{y}$ are too complex to express $p(y_k)$ exactly. 
-\fi
-Consider minimization of the MSE loss function
-\[
-\sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
-\]
-The probability $p(y_j\text{ shunned by } y_k)$ is equal to
-\[
-p(s_j+u_{kj}<s_k \wedge y_k=1) = p(y_k)p(s_j+u_{kj}<s_k|y_k)
-\]
-The optimal solution to our loss function is the expected value
-\[u_{kj}=\mathbb{E}(s_k-s_j|y_k)\]
-
-This ensures that $u_{kj}$ is ``just low enough'' to satisfy $s_j+u_{kj}<s_k$.
-It achieves a regularization effect similar to entropy maximization. It is impossible for a certain $y_j$ to have $p(y_j)=0$ because then for all $y_k$ we would get
-$p(s_j+u_{kj}<s_k|y_k)=1$ meaning that $u_{kj}<s_k-s_j$ is always true and $u_{kj}$ is below it's expected value, thus leading to contradiction. Analogically it is also impossible for a neuron to always be active  $p(y_j)=0$. 
-
-Empirically soft-WTA converges and produces complex patterns not only when $u_{kj}=\mathbb{E}(s_k-s_j|y_k)$ but also for $u_{kj}=\mathbb{E}(\lvert s_k-s_j\rvert  |y_k)$, $u_{kj}=\mathbb{E}( s_k s_j |y_k)$ and possibly others. It remains an open question how those different settings relate to each other, why they converge and whether one of them could hold the key to outperforming deep nets in more complex tasks than MNIST recognition.
-
-
+\subsection{Bursting ECC and empirical benchmarks}
+Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their korrelation $\mathbb{E}(s_j s_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course, if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and dekorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, learning $U$ is the problem of minimizing korrelation $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
 \begin{definition}
-	\textit{Bursting ECC network} is an incremental ECC network in which the output pattern $\boldsymbol{y}^{(t)}$ is at random time steps $t$ set equal to the pattern in previous step $\boldsymbol{y}^{(t-1)}$. 
+	\textit{Slow binary feature analysis} (SBFA) problem is formulated as minimization of both $\frac{d\boldsymbol{y}}{dt}$ and korrelation $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$.  The $\frac{d\boldsymbol{y}}{dt}$ is to be understood as $\frac{d\boldsymbol{y}}{dt}=\lVert y_{t+1}-y{t} \rVert$.
 \end{definition}
+\begin{corollary}
+For hard ECC networks the dekorrelation $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})=I$ is enforced by mutual-exclusivity of bits, hence, SBFA reduces to the problem of minimizing $\frac{d\boldsymbol{y}}{dt}$. 
+\end{corollary}
+SBFA can be solved with the following simple approach.
 \begin{definition}
-	\textit{Slow binary feature analysis} problem is the formulated as minimization of $\frac{d\boldsymbol{y}}{dt}$. As the bits of $\boldsymbol{y}$ are mutually-exclusive  is an incremental ECC network in which the output pattern $\boldsymbol{y}^{(t)}$ is at random time steps $t$ set equal to the pattern in previous step $\boldsymbol{y}^{(t-1)}$. 
+	\textit{Bursting hard ECC network} is an incremental hard ECC network in which the output pattern $\boldsymbol{y}^{(t)}$ is at random time steps $t$ set equal to the pattern in previous step $\boldsymbol{y}^{(t-1)}$. 
 \end{definition}
-The weights $W$ at $t$ are reinforced between $\boldsymbol{y}^{(t)}$ and $\boldsymbol{x}^{(t)}$
 
-The ECC networks can perform well on simple tasks such as MNIST. Figure \ref{fig:convergence_rate} shows the converge speed and figure \ref{table:ecc_accuracy} shows the accuracy.
+The hard ECC networks can perform well on simple tasks such as MNIST. Figure \ref{fig:convergence_rate} shows the converge speed and table \ref{table:ecc_accuracy} shows the accuracy.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=13.5cm]{convergence_rate}
@@ -1963,51 +1938,7 @@ The ECC networks can perform well on simple tasks such as MNIST. Figure \ref{fig
 	\label{table:ecc_accuracy}
 \end{table}
 As the depth of ECC network grows the accuracy suffers. 
-
-
-\iffalse
-\section{Experiments}
-
-ECC networks have been implemented and benchmarked to investigate their empirical performance. I used extropy maximization, as without it the networks failed to produce complex patterns.
-Figure \ref{fig:receptive_fields} presents receptive fields emerging in one arbitrarily chosen column in each of the first 3 layers of convolutional ECC network. These results have been observed when training all columns in all layers simultaneously on MNIST dataset. 
-
-The convergence speed (fig. \ref{fig:convergence_rate}) is fast and can outperform deep networks.
-\begin{figure}[!htbp]
-	\centering
-	\includegraphics[width=13.5cm]{convergence_rate}
-	\caption{Convergence rate of 3-layer ECC compared with 3-layer deep net. A linear classifier head is placed as a fourth layer on both networks and trained independently of the rest. ECC achieves high scores even before learning (only the head was trained), because sparse binary vectors have the effect of random projections.}
-	\label{fig:convergence_rate}
-\end{figure} 
-As the network depth increases, at a certain point the accuracy starts to suffer (table \ref{table:ecc_accuracy}).
-\begin{table}[]
-	\begin{tabular}{|llllll|}
-		\hline
-		layer    & 1     & 2     & 3     & 4    & 5    \\ \hline
-		channels & 49    & 100   & 144   & 256  & 256  \\ 
-		test    & 98\%  & 96\%  & 96\%  & 91\% & 68\% \\ 
-		train     & 100\% & 100\% & 100\% & 95\% & 68\% \\ \hline
-	\end{tabular}
-	\caption{Accuracy on MNIST observed by adding linear classifier head on top of each layer. This shows a decrease in the quality of learned representations. All layers use convolutional kernel of size 6 by 6. There is no weight sharing.}
-	\label{table:ecc_accuracy}
-\end{table}
-This is a sign that only using k-means is not enough and another mechanism might be necessary. All the networks presented so far did not contain any recurrent connections, but they should play a crucial role in biological neurons. When such connections are added between units within the same column, then the weights $W$ converge to autocorrelation matrices (fig. \ref{fig:recurrent_connections}).
-\begin{figure}[!htbp]
-	\centering
-	\includegraphics[width=13.5cm]{recurrent_connections}
-	\caption{Rows of correlation matrix (left) and weights $W_j$ for each neuron $y_j$ within one column.}
-	\label{fig:recurrent_connections}
-\end{figure} 
-Another important factor in the real brains is the slowness principle. SFA attempts to find functions whose derivative $\langle \dot{y}^2 \rangle$ is minimized, thus ensuring the output varies slowly over time.
-In the case of binary vectors, the analogue of $\langle \dot{y}^2 \rangle$   becomes
-$(\boldsymbol{y}^{(t+1)}-\boldsymbol{y}^{(t)})^2$, which is equal to the number of differing bits. Minimizing this expression is equivalent to maximizing the number of bits overlapping between consecutive time-steps. ECC networks achieve this effect by randomly fixing hidden layers $\boldsymbol{y}$, preventing the activation patterns from changing in then next step $t+1$ (as if the neurons were bursting, fig \ref{fig:cortial_spike_patterns}). Then the input signal $\boldsymbol{x}$ is acted upon with some action $a$. In the case of MNIST, it would be a small random translation. 
-As the values $\boldsymbol{y}$ are held fixed, hebbian learning will result in strengthening of connections not only between $\boldsymbol{x}^{(t)}$ and $\boldsymbol{y}^{(t)}$ but also $\boldsymbol{x}^{(t+1)}$ and $\boldsymbol{y}^{(t)}=\boldsymbol{y}^{(t+1)}$. This results in learning transformation-invariant representations (fig. \ref{fig:motor_drift}). 
-\begin{figure}[!htbp]
-	\centering
-	\includegraphics[width=13.5cm]{motor_drift}
-	\caption{Feedforward weights from input to first (right) and first to second (left) layer emerging when the activations in second layer were randomly frozen during training. Each pixel on the left corresponds to some neuron on the right. The red arrows illustrate how one of the neurons in the second layer has configured itself to detect horizontal lines, regardless of where they are. Note the first (top left) pixel is $0$ (blue) because a neuron being correlated with itself is not interesting and such cases were not counted.}
-	\label{fig:motor_drift}
-\end{figure} 
-This approach of leveraging slowness principle has a significant  positive effect on benchmark results (table \ref{table:ecc_accuracy_slow}). 
+The bursting hard ECC networks significantly outperform hard ECC networks (table \ref{table:ecc_accuracy_slow}). 
 \begin{table}[]
 	\resizebox{\columnwidth}{!}{%
 		\begin{tabular}{|llllllllllll|}
@@ -2019,9 +1950,122 @@ This approach of leveraging slowness principle has a significant  positive effec
 		\end{tabular}%
 	}
 	
-	\caption{Each layer with even number uses slowness principle and its activations are randomly fixed. The odd layers do not fix their activations. The kernel size is 6x6 for odd and 1x1 for even layers. An interesting observation is that slowness allows for significant reduction in number of channels.}
+	\caption{Each layer with even number is a convolutional bursting hard ECC. The odd layers are not bursting. The kernel size is 6x6 for odd and 1x1 for even layers. An interesting observation is that bursting allows for significant reduction in number of channels. During evaluation bursting is disabled.}
 	\label{table:ecc_accuracy_slow}
 \end{table}
+In our experiment we train bursting hard ECC by randomly choosing a small patch $\boldsymbol{x}$ of an image, computing layer activations $\boldsymbol{y}$, then choosing a new random patch $\boldsymbol{x}'$ spatially close the old one (so the two significantly overlap) and then reinforce the weights $W$ between new input $\boldsymbol{x}'$ and previous activations $\boldsymbol{y}$. The second patch is a translation of the first $\boldsymbol{x}'=\boldsymbol{x}.a$ where $a$ could be thought of as agent's action (e.g. eye movement). The bursting mechanism converges to weights that are invariant to ``small'' actions $a$ as show on figure \ref{fig:motor_drift}. 
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=13.5cm]{motor_drift}
+	\caption{Feedforward weights from input to first (right) and first to second (left) layer emerging when the activations in second layer were randomly frozen during training. Each pixel on the left corresponds to some neuron on the right. The red arrows illustrate how one of the neurons in the second layer has configured itself to detect horizontal lines, regardless of where they are. Note the first (top left) pixel is $0$ (blue) because a neuron being korrelated with itself is not interesting and such cases were not counted.}
+	\label{fig:motor_drift}
+\end{figure} 
+
+The bursting mechanism can be easily generalized to soft ECC networks. The dekorrelation can be achieved by learning $U$ weights. There are several approaches which converge in empirical experiments.
+\begin{itemize}
+	\item $u_{kj}=\mathbb{E}(s_k-s_j|y_k)$ 
+	\item $u_{kj}=\mathbb{E}(\lvert s_k-s_j\rvert  |y_k)$
+	\item $u_{kj}=\mathbb{E}( s_k s_j |y_k)$ 
+\end{itemize}
+\begin{theorem}
+	If $u_{kj}=\mathbb{E}(s_k-s_j|y_k)$ then it is impossible for any neuron to dominate $p(y_j)=1$ or always be silent $p(y_j)=0$.
+\end{theorem}
+\begin{proof}
+	It is impossible for any $y_j$ to have $p(y_j)=0$ because then for all $y_k$ we would get
+	$p(s_j+u_{kj}<s_k|y_k)=1$ meaning that $u_{kj}<s_k-s_j$ is always true and $u_{kj}$ is below it's expected value, thus leading to contradiction. Analogically it is also impossible for a neuron to always be active  $p(y_j)=0$. 
+\end{proof}
+
+
+
+
+\iffalse
+Let us recall that the entropy maximization algorithm  is based on
+\[	
+p(\argmax_j s_j + r_j=k) = \int  p(s_k=z) \prod_{j\ne k} p(s_j + u_{kj} < z) dz 
+\]
+which assumes that all variables $s_j$ are independent. Soft-WTA relaxes this assumption and models probabilities conditional on latent $\boldsymbol{y}$. 
+\[
+p(y_k) \approx \int_{z}p(s_k=z) \prod_{j\ne k} \big(p(s_j+u_{kj}<z|y_j)p(y_j)+p(\neg y_j)\big) dz
+\] 
+We know that $\boldsymbol{y}$ is uniquely determined by $\boldsymbol{s}$ but the formula above considers $p(y_j)$ and $p(s_k=z)$, as if $\boldsymbol{y}$, $\boldsymbol{s}$ were both random variables. The reason for this is simplification. The interactions between bits of $\boldsymbol{y}$ are too complex to express $p(y_k)$ exactly. 
+
+Consider minimization of the MSE loss function
+\[
+\sum_{k,j}\mathbb{E}\big((s_k-s_j - u_{kj})^2|y_k\big)
+\]
+
+The optimal solution to our loss function is the expected value
+\[u_{kj}=\mathbb{E}(s_k-s_j|y_k)\]
+
+This ensures that $u_{kj}$ is ``just low enough'' to satisfy $s_j+u_{kj}<s_k$.
+It achieves a regularization effect similar to entropy maximization. 
+
+Empirically soft-WTA converges and produces complex patterns not only when and possibly others. It remains an open question how those different settings relate to each other, why they converge and whether one of them could hold the key to outperforming deep nets in more complex tasks than MNIST recognition.
+\fi
+
+Bursting ECC explore a possible computational interpretation of the bursting mechanism of pyramidal neurons in neocortex, which once activated tend to spike multiple times. 
+Soft-WTA is computational investigation into the potential role of inhibitory neurons. The first neuron $\boldsymbol{y}$ to fire will immediately shun (prevent from firing) slower  $\boldsymbol{y}$. Excitatory neurons $y_k$ could be modeled by setting $v_{kj}=0$ for all $j$.  The values of $\boldsymbol{s}=\boldsymbol{x} W$ could be interpreted as latency coding. Higher $s_j$ corresponds to higher (momentary) frequency and lower latency. This model of causality is more sophisticated and biologically plausible than the representation of inhibitory neurons from figure \ref{fig:ecc_graphical_models}.
+
+
+\subsection{STDP}
+\iffalse
+What would happen if a zero vector $\boldsymbol{x}=0$ was an input to an ECC network? One of the neurons $\boldsymbol{y}$ is guaranteed to fire. In the case of MNIST large portions of the image are empty and such ``ghost'' activations would cause confusion in deeper layer. Therefore in the empirical benchmarks above we manually check for empty input and set the output to zero appropriately. One could generalize further.
+
+\begin{definition}
+Independent ECC network is defined as $\boldsymbol{y} = (\boldsymbol{x}W > \boldsymbol{r})$ where $>$ is an elementwise operation $\mathbb{R}^m \times \mathbb{R}^m \rightarrow \{0,1\}^m$.
+\end{definition}
+When $\boldsymbol{r}$ is a constant vector then independent ECC becomes a Rosenblatt perceptron.
+The entropy maximization algorithm can be defined analogically. 
+\fi
+
+Sparse binary vectors $\boldsymbol{x}$ can be represented as a list $[i:x_i=1]$ of indices $i$ at which $x_i=1$. This allows for very efficient implementation.
+\begin{example} \label{example:ecc_efficient_impl}
+An implementation (in Rust) is able to process 2000 MNIST images per second on a single thread of 2.7 GHz Intel i5 core. Each image is 25x25 pixels. The network has 734400 weights. When learning was enabled, it could train on 1700 images per second. 
+\begin{lstlisting}
+input $\boldsymbol{x}$ is an array [$i$ : $x_i=1$]
+$\boldsymbol{s}$ := $\boldsymbol{r}$  (* $m$ steps *)
+for $i$ in $\boldsymbol{x}$   
+    for $0 < j \le m$ 
+        $s_j$ := $s_j+w_{ij}$  (* $\lVert\boldsymbol{x}\rVert m$ steps *)
+$k$ := $\argmax_j \boldsymbol{s}$ (* m steps *)
+$r_j$ := $r_j-\epsilon$
+for $i$ in $\boldsymbol{x}$ 
+    $w_{ik}$ := $w_{ik}+\epsilon$ (* $\lVert\boldsymbol{x}\rVert$ steps *)
+$W_k$ := $\frac{W_k}{\lVert W_k \rVert_2}$ (* O(m) steps *)
+\end{lstlisting}
+We assume $\lVert \boldsymbol{x}\rVert$ is sparse and negligible, hence complexity is $O(m)$. 
+\iffalse 
+Convolutional networks can optimize $\boldsymbol{x} W$ by computing XY coordinate of pixel $x_i$ directly from its index $i$ and then only perform summation of the surrounding $w_{ij}$, thus $m\lVert \boldsymbol{x}\rVert$ is replaced by $ck^2\lVert \boldsymbol{x}\rVert$ where $c$ is number of channels, $k$ is the kernel size and $ck^2$ is much smaller than $m$.
+\fi
+\end{example}
+
+A binary vector $\boldsymbol{x}$ of cardinality $c$ can be represented by a list of indices in $c!$ ways.
+The ECC algorithm (as in example \ref{example:ecc_efficient_impl}) is invariant to the exact permutation of indices.
+From ECC perspective $[i : x_i=1]$ is a set $\{i : x_i=1\}$. Could we use the order of indices to encode additional information and improve our model of neural networks?
+
+\begin{definition}
+Ordered binary vector $\boldsymbol{x}\in [\boldmath{N}]$ is a sequence of unique indices $[i_1,i_2,...]$. Cardinality $\lVert \boldsymbol{x} \rVert$ is the length of the sequence.
+\end{definition}
+The sequence of indices can be used to encode the order in which spikes arrive to $\boldsymbol{y}$ neurons. The first index $i$ belongs to the input neuron $x_i$ that spiked first. Neurons that are the quickest to respond to a certain stimulus  carry the most information, hence, the first index is the most important one. The output $\boldsymbol{y}$ is also an ordered binary vector and the order of spikes is determined by $\boldsymbol{s}$.
+\begin{definition}
+Let $\boldsymbol{x}=[i_1,i_2,...,i_c]$.
+The $\boldsymbol{x}^{(h)}\in \{0,1\}^n$ is binary vector such that $x^{(h)}_{i_1}=x^{(h)}_{i_2}=...=x^{(h)}_{i_{min(c,h)}}=1$ and the other bits are zero.
+\end{definition}
+Biological neurons have a firing threshold, let it be $\boldsymbol{a}\in \mathbb{R}^m$. Spike timing dependent plasticity says connections $w_{ij}$ to neurons $x_i$ that fired before $y_j$ has fired should be strengthened, while those that fired afterwards should be weakened. Therefore if $h$ is the smallest number that results in $\boldsymbol{x}^{(h)} W_j = s_j > a_j$ then $w_{i_1}j,w_{i_2}j,...,w_{i_h}j$ should be strengthened, while the remaining $w_{i_{h+1}}j,...,w_{i_c}j$ should be weakened. The threshold $a_j$ could be modulated to achieve entropy maximization. 
+
+\begin{definition}
+Let $\alpha$ be a constant. (rate of action potential decay)
+\end{definition}
+\begin{definition}
+Distance between ordered binary vectors 
+\end{definition}
+
+
+
+
+\iffalse
+\section{Experiments}
+
 It is noteworthy that the final layer still has unacceptably low accuracy for such a simple task. We could compare this multilayer architecture to a single very wide dense layer (table \ref{table:ecc_accuracy_wide}).
 \begin{table}[]
 	\begin{tabular}{|lllll|}
@@ -2052,20 +2096,8 @@ It shows that the single layer can outperform the top layer of deeper architectu
 When the information about location is erased, the accuracy becomes significantly lower (table \ref{table:ecc_accuracy_voting}). The initial layers have a very small receptive field, thus their poor performance is understandable. The deeper layers get gradually better. At the very top layer, the receptive fields are so large that they cover nearly the entire image and there is little location information left. That information accounted for $74\%-64\%=10\%$ of accuracy. 
 
 Sparsity allows for significant performance increase. The full implementation of  $\argmax \boldsymbol{x} W+\boldsymbol{r}$ with entropy maximization and hebbian learning is as follows
-\begin{lstlisting}
-	input $\boldsymbol{x}$ is array [$i$ : $x_i=1$]
-	for $0 < j \le m$ do $s_j$ := $r_j$ 
-	for $i$ in $\boldsymbol{x}$ do for $0 < j \le m$ do $s_j$ := $s_j+w_{ij}$
-	$k$ := 0
-	for $0 < j \le m$ do if $s_j > s_k$ then $k$ := $j$
-	$r_j$ := $r_j-\epsilon$
-	for $i$ in $\boldsymbol{x}$ do $w_{ik}$ := $w_{ik}+\epsilon$
-	$h$ := 0
-	for $0 < j \le m$ do $h$ := $h+w_{jk}*w_{jk}$
-	$h$ := $\sqrt{h}$
-	for $0 < j \le m$ do $w_{jk}$ := $w_{jk}/h$
-\end{lstlisting}
-The total number of steps is $m+m\lVert \boldsymbol{x}\rVert+m+\lVert \boldsymbol{x}\rVert+m+m + O(1)=4m+(m+1)\lVert \boldsymbol{x}\rVert + O(1)$ of which there are $m+(m+1)\lVert \boldsymbol{x}\rVert$ additions, $1$ subtraction, $m$ divisions, $m$ multiplications and $m$ comparisons on floating points. Zero-order networks do not require multiplication. Convolutional networks can optimize $\boldsymbol{x} W$ by computing XY coordinate of pixel $x_i$ directly from its index $i$ and then only perform summation of the surrounding $w_{ij}$, thus $m\lVert \boldsymbol{x}\rVert$ is replaced by $ck^2\lVert \boldsymbol{x}\rVert$ where $c$ is number of channels, $k$ is the kernel size and $ck^2$ is much smaller than $m$. We assume $\lVert \boldsymbol{x}\rVert$ is negligible, hence complexity is $O(m)$. Rust implementation  was able to process 2000 MNIST images per second on a single thread of 2.7 GHz Intel i5 core. Each image was random patch of 25x25 pixels. The network had 734400 weights. When learning was enabled, it could train on 1700 images per second. 
+
+
 
 \fi
 
@@ -2123,11 +2155,6 @@ Higher-order networks are allowed to ``factor out'' certain common bits. For exa
 q(\boldsymbol{x}|y_*) = q(x_1|y_1)\big(q(x_2|y_1) +q(x_2|y_1)\big) + q(x_1|y_3)q(x_2|y_3)
 \]
 More generally, a higher-order network is the union of $1,2,3...$-order networks with equality constraints of the form $q(x_{i_1}|y_{j_1})=q(x_{i_2}|y_{j_2})$. Factoring out common bits leads to equations with a tree-like nested structure of brackets. This could be used to model dendritic trees of biological neurons. 
-
-\subsection{Causality models of soft- and hard-WTA}
-In biological networks, neurons can be either inhibitory or excitatory. Spiking networks simultaneously simulate both types in continuous time, albeit differential equations of inhibitory neurons typically use a faster timescale. 
-
-In discrete-time models, we attempt to expose the causality of spikes in a more explicit form. Should the excitatory neurons $\boldsymbol{y}$ fire first, then causing inhibitory $\boldsymbol{e}$ to fire second and finally leading to lateral inhibition of slower $\boldsymbol{y}$ neurons? This is the chain of causality represented by ECC networks (fig. \ref{fig:ecc_graphical_models}). An alternative view is that excitatory $\boldsymbol{x}$ causes inhibitory $\boldsymbol{y}$ to fire and then the winning  $\boldsymbol{y}$ immediately shun slower  $\boldsymbol{y}$ via  $V$, where $v_{kj}=1$ represents inhibitory connection from $y_k$ to $y_j$. This chain of causality is represented by soft-WTA. Excitatory neurons $y_k$ could simultaneously reside in $\boldsymbol{y}$ but their entries $v_{kj}$ would be zero for all $j$.  The values of $\boldsymbol{s}=\boldsymbol{x} W$ could be interpreted as latency coding. Higher $s_j$ corresponds to higher (momentary) frequency and lower latency. 
 
 
 \subsection{Soft-WTA from SFA perspective}
