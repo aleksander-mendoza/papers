@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "vf",
+    "ecc_py",
+]
