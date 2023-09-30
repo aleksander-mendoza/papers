@@ -12,7 +12,7 @@ import Pkg
 
 include("Ecc.jl")
 using LinearAlgebra, Plots, MLDatasets, GLM, Colors
-
+println("nthreads=", Threads.nthreads())
 images, labels = MNIST.traindata()
 labels .+= 1
 images = images .> 0.8
@@ -30,12 +30,14 @@ ecc = layer.hard_wta_l2(ph*pw, h*w)
 
 cs = conv.shape((1,28,28),ecc.m,(5,5))
 for epoch ∈ 1:2
-    train_results = batch_run_sparse_conv(ecc, cs, trainset)
-    classifier_head = head.naive_bayes(conv.out_volume(cs), 10, train_results, trainlabels)
-    test_results = batch_run_sparse_conv(ecc, cs, testset)
-    pred_testlabels = head.batch_run(classifier_head, test_results)
-    accuracy = sum(testlabels .== pred_testlabels) / length(testlabels)
-    println("[$(epoch)] accuracy=$(accuracy)")
+    global train_results = batch_run_sparse_conv(ecc, cs, trainset)
+    global classifier_head = head.linear(conv.out_volume(cs), 10, train_results, trainlabels, 5)
+    global test_results = batch_run_sparse_conv(ecc, cs, testset)
+    global pred_testlabels = head.batch_run(classifier_head, test_results)
+    global pred_trainlabels = head.batch_run(classifier_head, train_results)
+    global test_accuracy = sum(testlabels .== pred_testlabels) / length(testlabels)
+    global train_accuracy = sum(trainlabels .== pred_trainlabels) / length(trainlabels)
+    println("[$(epoch)] test accuracy=$(test_accuracy), train accuracy=$(train_accuracy)")
     train_on_patches(ecc,trainset,split,3,ph,pw)
 end
 

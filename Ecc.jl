@@ -3,6 +3,8 @@ using Random
 using Test
 using StatsBase
 using ProgressBars
+using ProgressMeter
+using ThreadsX
 
 function dense(indices::Union{AbstractVector{<:Integer},Integer}, shape)
     binary_vec = Array{Bool}(undef, shape)
@@ -91,23 +93,43 @@ function dense_top_k!(dense_x::AbstractArray, k::Integer, dense_y::AbstractArray
     @assert size(dense_x) == size(dense_y)
     return dense!(sparse_top_k(dense_x, k), dense_y)
 end
+"""
+Dot product `x' * y` where `x` is a sparse binary vector. Both vectors `x` and `y` must be of equal length. Output is a scalar.
+The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+"""
 function sparse_inner_product(sparse_vec::AbstractVector{<:Integer}, dense::AbstractVector)
     return sum(dense[sparse_vec])
 end
+"""
+Dot product `x' * W` where `x` is a sparse binary vector. Shapes are `size(W)=(rows, cols)` and `size(x)=(rows)`. Output vector is of size `cols`.
+The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+"""
 function sparse_dot(sparse_vec::AbstractVector{<:Integer}, dense::AbstractMatrix)
     o = similar(dense, size(dense, 2))
     return sparse_dot!(sparse_vec, dense, o)
 end
+"""
+Dot product `x' * W` where `x` is a sparse binary vector. Shapes are `size(W)=(rows, cols)` and `size(x)=(rows)`. Output vector is of size `cols`.
+The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+"""
 function sparse_dot!(sparse_vec::AbstractVector{<:Integer}, dense::AbstractMatrix, output::AbstractVector)
     for j in axes(dense, 2)
         output[j] = sparse_inner_product(sparse_vec, dense[:, j])
     end
     return output
 end
+"""
+Dot product `W * x` where `x` is a sparse binary vector. Shapes are `size(W)=(rows, cols)` and `size(x)=(cols)`. Output vector is of size `rows`.
+The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+"""
 function sparse_dot_t(dense::AbstractMatrix, sparse_vec::AbstractVector{<:Integer})
     o = similar(dense, size(dense, 1))
     return sparse_dot_t!(dense, sparse_vec, o)
 end
+"""
+Dot product `W * x` where `x` is a sparse binary vector. Shapes are `size(W)=(rows, cols)` and `size(x)=(cols)`. Output vector is of size `rows`.
+The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+"""
 function sparse_dot_t!(dense::AbstractMatrix, sparse_vec::AbstractVector{<:Integer}, output::AbstractVector)
     for j in axes(dense, 1)
         output[j] = sparse_inner_product(sparse_vec, dense[j, :])
@@ -767,13 +789,26 @@ x is of shape [in_channels, in_height, in_width, batch]
 """
 function batch_run_sparse_conv(ecc_layer::layer.Layer, shape::conv.Shape, inputs::AbstractArray{Bool})
     @assert ndims(inputs) == 4
-    pb = tqdm(eachslice(inputs, dims=4))
-    set_description(pb, "batch_run_sparse_conv")
-    return [run_sparse_conv(ecc_layer, shape, x) for x in pb]
+    p = Progress(size(inputs,4); desc="batch_run_sparse_conv")
+    o = ThreadsX.map(x->begin next!(p); return run_sparse_conv(ecc_layer, shape, x) end, eachslice(inputs, dims=4)) 
+    finish!(p)
+    return o
 end
+
+function softmax!(x::Matrix{<:AbstractFloat})
+    x .-= minimum(x) # for numerical stability (this change will cancel out during division two lines later)
+    x .= exp.(x) 
+    x ./= sum(x) 
+    return x
+end
+softmax(x::Matrix{<:AbstractFloat}) = softmax!(copy(x))
 
 module head
     using ProgressBars
+    using Plots
+    import ..sparse_dot
+    import ..softmax!
+
     mutable struct NaiveBayes
         const in_size::Int
         const num_classes::Int
@@ -789,10 +824,11 @@ module head
         log_p_words_and_class
         NaiveBayes(in_size::Int, num_classes::Int) = new(in_size, num_classes, zeros(num_classes, in_size), zeros(num_classes), 0, )
     end
+    naive_bayes(in_size::Int, num_classes::Int) = NaiveBayes(in_size, num_classes)
     function naive_bayes(in_size::Int, num_classes::Int, sparse_datatset::AbstractVector{<:AbstractVector{<:Integer}}, labels::AbstractVector{<:Integer})
-        return naive_bayes!(NaiveBayes(in_size, num_classes), sparse_datatset, labels)
+        return train!(NaiveBayes(in_size, num_classes), sparse_datatset, labels)
     end
-    function naive_bayes!(nb::NaiveBayes, sparse_datatset::AbstractVector{<:AbstractVector{<:Integer}}, labels::AbstractVector{<:Integer})
+    function train!(nb::NaiveBayes, sparse_datatset::AbstractVector{<:AbstractVector{<:Integer}}, labels::AbstractVector{<:Integer})
         pb = tqdm(zip(sparse_datatset, labels))
         set_description(pb, "training naive_bayes")
         for (x, y) in pb
@@ -817,6 +853,91 @@ module head
         pb = tqdm(sparse)
         set_description(pb, "head.batch_run")
         return [run(nb, y) for y in pb] 
+    end
+    # Negative Log Likelihood Loss
+    # https://ljvmiranda921.github.io/notebook/2017/08/13/softmax-and-the-negative-log-likelihood/
+    # L = log(softmax(y)[k])   where k is the correct label
+    # softmax(y)[j] = exp(y[j])/sum(exp.(y))
+    # dL/dy[j] =
+    #  = d/dy[j] { log(exp(y[k])/sum(exp.(y))) }
+    #  = d/dy[j] { log(exp(y[k])) - log(sum(exp.(y))) }
+    #  = d/dy[j] { y[k] } - d/dy[j] {log(sum(exp.(y)))}
+    #  = (k==j) - 1/sum(exp.(f)) * d/dy[j] sum(exp.(y))
+    #  = (k==j) - 1/sum(exp.(f)) * d/dy[j] exp(y[k])
+    #  = (k==j) - 1/sum(exp.(f)) * exp(y[j])
+    #  = (k==j) - exp(y[j])/sum(exp.(y))
+    #  = (k==j) - softmax(y)[j]
+    # y[j] = x' * W[:,j] 
+    # dL/dW[i,j] =
+    #  = dL/dy[j] * dy[j]/dW[i,j] 
+    #  = ((k==j) - softmax(y)[j]) * x[i]
+    #
+    # If x is a sparse binary vector then we can optimize by only computing 
+    # dL/dW[i,j] = (k==j) - softmax(y)[j]   where  x[i]==1
+    mutable struct Linear
+        const in_size::Int
+        const num_classes::Int
+        # [in_size, num_classes]
+        W::Matrix{Float32}  
+        # [num_classes]
+        b::Vector{Float32}
+        # [in_size+1, num_classes] - first moment of Adam optimizer. Plus 1 is for bias
+        m::Matrix{Float32}
+        # [in_size+1, num_classes] - second moment of Adam optimizer. Plus 1 is for bias
+        v::Matrix{Float32}
+        learning_rate::Float32
+        m_decay::Float32
+        v_decay::Float32
+        Linear(in_size::Int, num_classes::Int, learning_rate::Float32=0.001f0,beta1::Float32=0.9f0,beta2::Float32=0.999f0) = new(
+            in_size, 
+            num_classes, 
+            rand(in_size, num_classes), # W
+            rand(num_classes),  # b
+            zeros(in_size+1, num_classes),  # m
+            zeros(in_size+1, num_classes),  # v
+            learning_rate, # initial learning rate
+            beta1, # m_decay
+            beta2, # v_decay
+        )
+    end
+    function linear(in_size::Int, num_classes::Int, sparse_datatset::AbstractVector{<:AbstractVector{<:Integer}}, labels::AbstractVector{<:Integer}, epochs::Integer=1)
+        return train!(Linear(in_size, num_classes), sparse_datatset, labels, epochs)
+    end
+    linear(in_size::Int, num_classes::Int) = Linear(in_size, num_classes)
+    function train!(l::Linear, sparse_datatset::AbstractVector{<:AbstractVector{<:Integer}}, labels::AbstractVector{<:Integer}, epochs::Integer=1)
+        pb = tqdm(zip(sparse_datatset, labels))
+        set_description(pb, "training linear classifier head")
+        for _ in 1:epochs
+            for (sparse_x, k) in pb
+                if length(sparse_x) > 0
+                    q = softmax!(sparse_dot(sparse_x, l.W) + l.b)
+                    q[k] -= 1  # now it becomes softmax(y) - one_hot(k)
+                    qq = q.*q
+                    alpha = l.learning_rate * sqrt(1 - l.v_decay) / (1 - l.m_decay)
+                    @inline function adam_step(i::Integer)
+                        l.m[i,:] = l.m_decay * l.m[i,:] + (1-l.m_decay) .* q
+                        l.v[i,:] = l.v_decay * l.v[i,:] + (1-l.v_decay) .* qq
+                        return alpha .* l.m[i,:] ./ (sqrt.(l.v[i,:]) .+ 1e-8)
+                    end
+                    for i in sparse_x
+                        # now q[j] becomes -dL/dW[i,j]  because x[i]==1
+                        l.W[i,:] .-= l.learning_rate .* q # adam_step(i)
+                    end
+                    l.b .-= l.learning_rate .* q # adam_step(l.in_size+1)
+                end
+            end
+        end
+        return l
+    end
+    """
+    classifies a sparse vector `x` of size `l.in_size`. Argument `sparse` is a sparse representation of `x`.
+    """
+    function run(l::Linear, sparse::AbstractVector{<:Integer}) 
+        return argmax(sparse_dot(sparse, l.W) + l.b)
+    end
+    function plot(l::Linear, shape)
+        Plots.plot((Plots.heatmap(reshape(p,shape)) for p in eachslice(l.W,dims=2))...)
+        heatmap()
     end
 end
 ####################################################################################
@@ -886,7 +1007,7 @@ end
 function test6()
     X::Vector{Vector{Int}} = [[1,2,3], [3,4,5], [1,4,6], []]
     ecc = layer.hard_wta_l2(6, 3)
-    for _ in 1:30
+    for _ in 1:300
         for x in X
             y = layer.run(ecc, x)
             layer.learn(ecc, x, y)
@@ -908,6 +1029,16 @@ function test6()
     return true
 end
 
+function test7()
+    x::Vector{Vector{Int}} = [[1,2,3], [3,4,5], [1,4,6]]
+    y = [1,2,3]
+    l = head.linear(6, 3)
+    head.train!(l,x,y,500)
+    y2 = head.batch_run(l, x)
+    @assert all(y2.==y) "$(y2) != $(y)"
+    return true
+end
+
 @testset "Conv Tests" begin
     @test test1()
     @test test2()
@@ -915,4 +1046,5 @@ end
     @test test4()
     @test test5()
     @test test6()
+    @test test7()
 end

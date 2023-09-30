@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="RUST_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/cli/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/evolutio/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/evolutio/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/render/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/shadertoy/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/shadertoy/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ecc_py/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/main/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/vf/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/evolutio/target" />
+      <excludeFolder url="file://$MODULE_DIR$/evolutio/target" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
