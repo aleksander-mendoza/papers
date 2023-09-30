@@ -1,4 +1,3 @@
-#![feature(option_result_contains)]
 #![feature(slice_flatten)]
 
 mod slice_box;
@@ -177,110 +176,6 @@ pub fn conv_compose_weights<'py>(stride1:[usize;2], weights1: &'py PyArray4<f32>
     unreachable!();
 }
 
-
-#[pyfunction]
-#[text_signature = "(v,s)"]
-/// u is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = top_v_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
-    let w = winners.into_pyarray(v.py());
-    Ok(w)
-}
-
-#[pyfunction]
-#[text_signature = "(u,s)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = top_u_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
-    let w = winners.into_pyarray(u.py());
-    Ok(w)
-}
-
-#[pyfunction]
-#[text_signature = "(u,s)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = multiplicative_top_u_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
-    let w = winners.into_pyarray(u.py());
-    Ok(w)
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(top_u_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(v,s,y)"]
-/// u is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(top_v_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-/// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
-/// shape of y is [height, width, channels].
-pub fn soft_wta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_u_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(v,s,y)"]
-/// v is row-major. Element v[j0,j1,k,j]==1 means neuron k (row) can inhibit neuron j (column).
-/// Shape of s is [height, width, channels], shape of v is [height, width, channels, channels],
-/// shape of y is [height, width, channels].
-pub fn soft_wta_v_conv_<'py>(v: &'py PyArray4<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_v_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-/// Shape of s is [height, width, channels], shape of u is [channels, channels],
-/// shape of y is [height, width, channels].
-pub fn soft_wta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_u_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(v,s,y)"]
-/// v is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
-/// Shape of s is [height, width, channels], shape of v is [channels, channels],
-/// shape of y is [height, width, channels].
-pub fn soft_wta_v_repeated_conv_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_v_repeated_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(multiplicative_top_u_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
-///  shape of y is [height, width, channels].
-/// u is row-major. Element u[j0,j1,k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(multiplicative_top_u_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// Shape of s is [height, width, channels], shape of u is [channels, channels],
-///  shape of y is [height, width, channels].
-/// u is row-major. Element u[j0,j1,k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(multiplicative_top_u_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
 
 type Idx = u32;
 
@@ -579,7 +474,7 @@ pub fn version<'py>() -> u32 {
 /// true boolean values within each batch.
 /// The second vector contains offsets to the first one. It works just like [[int]] but is flattened.
 /// Batches are assumed to be laid out continuously in memory.
-pub fn batch_dense_to_sparse(bools: &PyArrayDyn<bool>) ->PyResult<(PyObject, PyObject)>{
+pub fn batch_sparse(bools: &PyArrayDyn<bool>) ->PyResult<(PyObject, PyObject)>{
     assert!(bools.ndim()>1,"Tensor must have at least 2 dimensions!");
     let b = unsafe{bools.as_slice()?};
     let batch_size = bools.shape()[1..].product();
@@ -591,9 +486,25 @@ pub fn batch_dense_to_sparse(bools: &PyArrayDyn<bool>) ->PyResult<(PyObject, PyO
 #[pyfunction]
 #[text_signature = "(bools)"]
 /// Returns a vector containing indices of all true boolean values
-pub fn dense_to_sparse(bools:&PyArrayDyn<bool>)->PyResult<PyObject>{
+pub fn sparse(bools:&PyArrayDyn<bool>)->PyResult<&PyArray1<u32>>{
     let b = unsafe{bools.as_slice()?};
-    Ok(PyArray1::<u32>::from_vec(bools.py(),vf::dense_to_sparse(b)).to_object(bools.py()))
+    Ok(PyArray1::<u32>::from_vec(bools.py(),vf::dense_to_sparse(b)))
+}
+#[pyfunction]
+#[text_signature = "(indices)"]
+/// Returns a vector containing indices of all true boolean values
+pub fn dense(indices:&PyArrayDyn<u32>, length:usize)->PyResult<&PyArray1<bool>>{
+    let b = unsafe{indices.as_slice()?};
+    Ok(PyArray1::<bool>::from_vec(indices.py(),vf::sparse_to_dense(b, length)))
+}
+#[pyfunction]
+#[text_signature = "(indices)"]
+/// Returns a vector containing indices of all true boolean values
+pub fn dense_(indices:&PyArrayDyn<u32>, output:&PyArrayDyn<bool>)->PyResult<()>{
+    let b = unsafe{indices.as_slice()?};
+    let o = unsafe{output.as_slice_mut()?};
+    vf::sparse_to_dense_(b,o);
+    Ok(())
 }
 #[pyfunction]
 #[text_signature = "(probabilities)"]
@@ -630,11 +541,190 @@ pub fn sample_of_cardinality(values:&PyArrayDyn<f32>, cardinality:usize, std_dev
     Ok(d)
 }
 #[pyfunction]
-#[text_signature = "(collector, n, from_inclusive, to_exclusive)"]
+#[text_signature = "(cardinality, from_inclusive, to_exclusive)"]
 /// Returns a vector containing indices of all true boolean values
-pub fn rand_set(py:Python, cardinality: usize, from_inclusive: usize, to_exclusive:usize)-> PyObject{
+pub fn rand_sparse_k(py:Python, cardinality: usize, from_inclusive: usize, to_exclusive:usize)-> PyObject{
     let mut v = vf::rand_set(cardinality,from_inclusive..to_exclusive);
     PyArray1::from_vec(py,v).to_object(py)
+}
+#[pyfunction]
+#[text_signature = "(cardinality, length)"]
+/// Returns a binary vector of specific length (number of 1s and 0s) and cardinality (number of 1s)
+pub fn rand_dense_k(py:Python, cardinality: u32, length:u32)-> PyObject{
+    let mut v = vf::rand_dense(cardinality,length);
+    PyArray1::from_vec(py,v).to_object(py)
+}
+
+#[pyfunction]
+#[text_signature = "(dense, threshold)"]
+/// returns indices i at which `dense[i] > threshold`. Those indices are sorted by `dense[i]` in descending order.
+pub fn sparse_gt<'py>(py:Python<'py>, dense: &'py PyArrayDyn<f32>, threshold:f32)-> PyResult<&'py PyArray1<u32>>{
+    let p = unsafe{dense.as_slice()?};
+    Ok(PyArray1::from_vec(py,vf::sparse_gt(p,threshold)))
+}
+
+#[pyfunction]
+#[text_signature = "(dense, k)"]
+/// returns k indices corresponding to the k highest values in dense vector. Those indices i are sorted by dense[i] in descending order.
+pub fn sparse_top_k<'py>(py:Python<'py>, dense: &'py PyArrayDyn<f32>, k:u32)-> PyResult<&'py PyArray1<u32>>{
+    let p = unsafe{dense.as_slice()?};
+    Ok(PyArray1::from_vec(py,vf::sparse_top_k(p,k)))
+}
+
+#[pyfunction]
+#[text_signature = "(dense, k)"]
+/// returns k indices corresponding to the k highest values in dense vector. Those indices i are sorted by dense[i] in descending order.
+pub fn dense_top_k<'py>(py:Python<'py>, dense: &'py PyArrayDyn<f32>, k:u32)-> PyResult<&'py PyArrayDyn<bool>>{
+    let p = unsafe{dense.as_slice()?};
+    PyArray1::from_vec(py,vf::sparse_to_dense(&vf::sparse_top_k(p,k),dense.len())).reshape(dense.shape())
+}
+#[pyfunction]
+#[text_signature = "(sparse, dense)"]
+/// Dot product `x' * y` where `x` is a sparse binary vector. Both vectors `x` and `y` must be of equal length. Output is a scalar.
+/// The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+pub fn sparse_inner_product<'py>(sparse:&'py PyArray1<u32>, dense: &'py PyArray1<f32>)-> PyResult<f32>{
+    let d = unsafe{dense.as_slice()?};
+    let s = unsafe{sparse.as_slice()?};
+    Ok(vf::dot_sparse_slice::inner_product(s,d))
+}
+#[pyfunction]
+#[text_signature = "(sparse, dense)"]
+/// Dot product `x' * W` where `x` is a sparse binary vector. Shapes are `size(W)=(rows, cols)` and `size(x)=(rows)`. Output vector is of size `cols`.
+/// The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+pub fn sparse_dot<'py>(sparse:&'py PyArray1<u32>, dense: &'py PyArray2<f32>)-> PyResult<&'py PyArray1<f32>>{
+    let shape = dense.shape();
+    let cols = shape[1];
+    let s = unsafe{sparse.as_slice()?};
+    let d = unsafe{dense.as_slice()?};
+    let output = vf::dot_sparse_slice::dot1(s,d,cols);
+    Ok(PyArray1::from_vec(sparse.py(),output))
+}
+#[pyfunction]
+#[text_signature = "(dense,sparse)"]
+/// Dot product `W * x` where `x` is a sparse binary vector. Shapes are `size(W)=(rows, cols)` and `size(x)=(cols)`. Output vector is of size `rows`.
+/// The input `sparse_vec` is a sprase representation (list of indices of turned-on bits) of `x`.
+pub fn sparse_dot_t<'py>(dense: &'py PyArray2<f32>, sparse:&'py PyArray1<u32>)-> PyResult<&'py PyArray1<f32>>{
+    let shape = dense.shape();
+    let rows = shape[0];
+    let s = unsafe{sparse.as_slice()?};
+    let d = unsafe{dense.as_slice()?};
+    let output = vf::dot_sparse_slice::dot1_t(d,s,rows);
+    Ok(PyArray1::from_vec(sparse.py(),output))
+}
+
+
+// #[pyfunction]
+// #[text_signature = "(v,s)"]
+// /// Binary-valued ordered soft-winner-takes-all. V are the strengths of inhibitory connections, s are the delays at which neurons fired,
+// /// si is a list of indices of those neurons that fired sorted by the order in which they fired. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+// pub fn ordered_swta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>) -> PyResult<&'py PyArray1<bool>> {
+//     let winners = vf::soft_wta::or(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
+//     let w = winners.into_pyarray(v.py());
+//     Ok(w)
+// }
+
+#[pyfunction]
+#[text_signature = "(v,s)"]
+/// u is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+pub fn soft_wta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = top_v_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
+    let w = winners.into_pyarray(v.py());
+    Ok(w)
+}
+
+#[pyfunction]
+#[text_signature = "(u,s)"]
+/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+pub fn soft_wta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = top_u_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
+    let w = winners.into_pyarray(u.py());
+    Ok(w)
+}
+
+#[pyfunction]
+#[text_signature = "(u,s)"]
+/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+pub fn multiplicative_soft_wta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = multiplicative_top_u_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
+    let w = winners.into_pyarray(u.py());
+    Ok(w)
+}
+
+#[pyfunction]
+#[text_signature = "(u,s,y)"]
+/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+pub fn soft_wta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(top_u_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(v,s,y)"]
+/// u is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+pub fn soft_wta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(top_v_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+
+#[pyfunction]
+#[text_signature = "(u,s,y)"]
+/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+/// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
+/// shape of y is [height, width, channels].
+pub fn soft_wta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(top_u_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(v,s,y)"]
+/// v is row-major. Element v[j0,j1,k,j]==1 means neuron k (row) can inhibit neuron j (column).
+/// Shape of s is [height, width, channels], shape of v is [height, width, channels, channels],
+/// shape of y is [height, width, channels].
+pub fn soft_wta_v_conv_<'py>(v: &'py PyArray4<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(top_v_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+
+#[pyfunction]
+#[text_signature = "(u,s,y)"]
+/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+/// Shape of s is [height, width, channels], shape of u is [channels, channels],
+/// shape of y is [height, width, channels].
+pub fn soft_wta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(top_u_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(v,s,y)"]
+/// v is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+/// Shape of s is [height, width, channels], shape of v is [channels, channels],
+/// shape of y is [height, width, channels].
+pub fn soft_wta_v_repeated_conv_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(top_v_repeated_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(u,s,y)"]
+/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+pub fn multiplicative_soft_wta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(multiplicative_top_u_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(u,s,y)"]
+/// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
+///  shape of y is [height, width, channels].
+/// u is row-major. Element u[j0,j1,k,j]==0 means neuron k (row) can inhibit neuron j (column).
+pub fn multiplicative_soft_wta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(multiplicative_top_u_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(u,s,y)"]
+/// Shape of s is [height, width, channels], shape of u is [channels, channels],
+///  shape of y is [height, width, channels].
+/// u is row-major. Element u[j0,j1,k,j]==0 means neuron k (row) can inhibit neuron j (column).
+pub fn multiplicative_soft_wta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(multiplicative_top_u_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
 }
 
 #[pyfunction]
@@ -1026,9 +1116,15 @@ fn ecc_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(soft_wta_v_repeated_conv_, m)?)?;
     m.add_function(wrap_pyfunction!(multiplicative_soft_wta_u_repeated_conv_, m)?)?;
     m.add_function(wrap_pyfunction!(multiplicative_soft_wta_u, m)?)?;
-    m.add_function(wrap_pyfunction!(dense_to_sparse, m)?)?;
-    m.add_function(wrap_pyfunction!(batch_dense_to_sparse, m)?)?;
-    m.add_function(wrap_pyfunction!(rand_set, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse, m)?)?;
+    m.add_function(wrap_pyfunction!(batch_sparse, m)?)?;
+    m.add_function(wrap_pyfunction!(rand_sparse_k, m)?)?;
+    m.add_function(wrap_pyfunction!(rand_dense_k, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_gt, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_top_k, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_inner_product, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_dot, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_dot_t, m)?)?;
     m.add_function(wrap_pyfunction!(cyclic_group, m)?)?;
     m.add_function(wrap_pyfunction!(cyclic_monoid, m)?)?;
     m.add_function(wrap_pyfunction!(direct_product, m)?)?;

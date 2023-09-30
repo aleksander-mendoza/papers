@@ -60,17 +60,17 @@ pub trait VectorFieldOwned<Scalar: Copy>: Sized {
 
 pub trait VectorFieldFull<Scalar: Copy>: InitFilled<Scalar>+Sized {
     fn full(s:Scalar) -> Self{
-        Self::init_filled(s)
+        InitFilled::full(s)
     }
 }
 pub trait VectorFieldInitZero<Scalar: Copy+Zero>: VectorFieldFull<Scalar> {
     fn zero() -> Self{
-        Self::full(Scalar::zero())
+        VectorFieldFull::full(Scalar::zero())
     }
 }
 pub trait VectorFieldInitOne<Scalar: Copy+One>: VectorFieldFull<Scalar> {
     fn one() -> Self{
-        Self::full(Scalar::one())
+        VectorFieldFull::full(Scalar::one())
     }
 }
 

@@ -292,22 +292,7 @@ pub fn conv_nearest(img:&[u8], out:&mut [u8], kernel_height:usize, kernel_width:
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn test17(){
-        let kernel_height = 3;
-        let kernel_width = 3;
-        let height = 6;
-        let width = 6;
-        let channels = 3;
-        let img:Vec<f32> = (0..height*width*channels).map(|_|rand::random::<f32>()).collect();
-        let kernel:Vec<f32> = (0..kernel_height*kernel_width).map(|_|1./(kernel_height*kernel_width) as f32).collect();
-        let mut out:Vec<f32> = vec![0.;height*width];
-        conv_variance(&img, &kernel, &mut out,kernel_height ,
-                      kernel_width ,
-                      height ,
-                      width,
-                      channels)
-    }
+
     #[test]
     fn test5() {
         for x in 1..3 {

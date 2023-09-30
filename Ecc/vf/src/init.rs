@@ -22,7 +22,7 @@ pub trait InitWith<T>{
     fn init_with(f:impl FnMut(usize)->T)->Self;
 }
 pub trait InitFilled<T:Clone>{
-    fn init_filled(f:T)->Self;
+    fn full(f:T) ->Self;
 }
 pub trait InitWithCapacity<T>{
     type C;
@@ -30,7 +30,7 @@ pub trait InitWithCapacity<T>{
 }
 pub trait InitFilledCapacity<T:Clone>{
     type C;
-    fn init_filled(capacity:Self::C, f:T)->Self;
+    fn full(capacity:Self::C, f:T) ->Self;
 }
 pub trait InitFold<T:Clone>{
     fn init_fold(start:T, f:impl FnMut(T,usize)->T)->Self;
@@ -80,7 +80,7 @@ impl <T,const DIM:usize> InitWith<T> for [T;DIM]{
     }
 }
 impl <T:Copy,const DIM:usize> InitFilled<T> for [T;DIM]{
-    fn init_filled(t:T)->Self{
+    fn full(t:T) ->Self{
         [t;DIM]
     }
 }
@@ -92,7 +92,7 @@ impl <T> InitWithCapacity<T> for Vec<T>{
 }
 impl <T:Clone> InitFilledCapacity<T> for Vec<T>{
     type C = usize;
-    fn init_filled(capacity:usize, f:T)->Self{
+    fn full(capacity:usize, f:T) ->Self{
         vec![f;capacity]
     }
 }

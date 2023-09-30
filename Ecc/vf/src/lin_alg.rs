@@ -71,7 +71,7 @@ impl<S> From<Vec<S>> for Mat<S, 1> {
 impl<S:Clone, const DIM: usize> InitFilledCapacity<S> for Mat<S, DIM> {
     type C = [u32; DIM];
 
-    fn init_filled(capacity: Self::C, f: S) -> Self {
+    fn full(capacity: Self::C, f: S) -> Self {
         Self { shape: capacity, data: vec![f; capacity.product() as usize].into_boxed_slice() }
     }
 }

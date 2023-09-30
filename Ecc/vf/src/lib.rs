@@ -76,6 +76,8 @@ mod quat;
 pub mod histogram;
 mod num;
 mod vec;
+pub mod dot_sparse_slice;
+
 
 pub use vec::*;
 pub use num::*;

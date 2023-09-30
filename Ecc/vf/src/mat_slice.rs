@@ -1,5 +1,7 @@
+use std::mem::MaybeUninit;
 use std::ops::{Add, Mul};
 use num_traits::Zero;
+use crate::init::UninitEmptyWithCapacity;
 use crate::VectorField;
 
 /**C-contiguous matrix of shape [height, width]. Stride is equal to width. This function folds all elements in a column*/
@@ -67,3 +69,15 @@ pub fn product_mat_rows<A:Clone+Mul<Output=A>>(width:usize, matrix: &[A], produc
     fold_rows(width, matrix, products, |a, b|a*b.clone())
 }
 
+pub fn transpose<A:Copy>(matrix: &[A], rows:usize)->Vec<A>{
+    let columns = matrix.len() / rows;
+    let mut o = unsafe{Vec::empty_uninit(matrix.len())};
+    for row in 0..rows{
+        for col in 0..columns{
+            let i = row * columns + col;
+            let j = col * rows + row;
+            o[j] = matrix[i];
+        }
+    }
+    o
+}

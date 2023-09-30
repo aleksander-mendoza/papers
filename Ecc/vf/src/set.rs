@@ -4,8 +4,10 @@ use std::hash::Hash;
 use std::iter::Step;
 use num_traits::{AsPrimitive, NumAssignOps, One, PrimInt, Zero};
 use std::ops::{Add, AddAssign, Range, Rem, Sub};
+use partial_sort::{partial_sort, PartialSort};
 use rand::distributions::{Distribution, Standard};
 use crate::from_usize::FromUsize;
+use crate::init::InitFilledCapacity;
 
 pub trait SetCardinality {
     /**Set cardinality is the number of its member elements*/
@@ -209,24 +211,47 @@ impl<N: AsPrimitive<usize> + Copy> SetSparseIndexArray for Vec<N> {
     }
 }
 
-pub fn add_unique_random<N: PrimInt+NumAssignOps+AsPrimitive<usize>+Step+Hash>(collector:&mut Vec<N>, n: N, range: Range<N>) where Standard: Distribution<N>{
+pub fn add_unique_random<N: PrimInt+NumAssignOps+AsPrimitive<usize>+Step+Hash>(mut cache:impl FnMut(N)->bool, n: N, range: Range<N>) where Standard: Distribution<N>{
     let len = range.end - range.start;
     assert!(len >= n);
-    let mut set = HashSet::new();
     for _ in N::zero()..n {
         let mut r = range.start + rand::random::<N>() % len;
-        while !set.insert(r) {
+        while cache(r) { // cache says whether r already occurred before
             r += N::one();
             if r >= range.end {
                 r = range.start;
             }
         }
-        collector.push(r);
     }
 }
+pub fn sparse_gt(dense:&[f32], threshold:f32)->Vec<u32>{
+    let mut indices = Vec::new();
+    for (i,v) in dense.iter().cloned().enumerate(){
+        if v > threshold{
+            indices.push(i as u32);
+        }
+    }
+    indices.sort_by(|&a,&b|dense[b as usize].total_cmp(&dense[a as usize]));// a and b are reversed to sort in descending order
+    indices
+}
+pub fn sparse_top_k(dense:&[f32], k:u32)->Vec<u32>{
+    let mut perm:Vec<u32> = (0..dense.len() as u32).collect();
+    perm.partial_sort(k as usize,|&a,&b|dense[b as usize].total_cmp(&dense[a as usize]));// a and b are reversed to sort in descending order
+    perm.truncate(k as usize);
+    perm
+}
 pub fn rand_set<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinality: N, range: Range<N>) -> Vec<N> where Standard: Distribution<N>{
-    let mut s = Vec::with_capacity(cardinality.as_());
-    add_unique_random(&mut s,cardinality, range);
+    let mut set = HashSet::new();
+    add_unique_random(|n|!set.insert(n),cardinality, range);
+    set.into_iter().collect()
+}
+pub fn rand_dense<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinality: N, length:N) -> Vec<bool> where Standard: Distribution<N>{
+    let mut s = Vec::full(length.as_(),false);
+    add_unique_random(|n| {
+        let prev = s[n.as_()];
+        s[n.as_()] = true;
+        prev
+    },cardinality, N::zero()..length);
     s
 }
 //     /**Randomly picks some neurons that a present in other SDR but not in self SDR.
@@ -297,6 +322,17 @@ pub fn dense_to_sparse_<Idx: FromUsize>(bools: &[bool], output: &mut Vec<Idx>) {
 pub fn dense_to_sparse<Idx: FromUsize>(bools: &[bool]) -> Vec<Idx> {
     let mut v = Vec::<Idx>::new();
     dense_to_sparse_(bools, &mut v);
+    v
+}
+
+pub fn sparse_to_dense_<Idx: AsPrimitive<usize>>(indices: &[Idx], output: &mut [bool]) {
+    for i in indices{
+        output[i.as_()] = true
+    }
+}
+pub fn sparse_to_dense<Idx: AsPrimitive<usize>>(indices: &[Idx], length:usize) -> Vec<bool> {
+    let mut v:Vec<bool> = (0..length).map(|_|false).collect();
+    sparse_to_dense_(indices, &mut v);
     v
 }
 
