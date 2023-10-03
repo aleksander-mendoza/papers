@@ -14,15 +14,11 @@ extern crate core;
 
 
 pub mod conv;
-pub mod dot_arr;
 pub mod top_k;
-pub mod static_layout;
 pub mod init;
-pub mod dot_slice;
 pub mod shaped_tensor_mad;
 pub mod dot_sparse_arr;
 pub mod shape;
-pub mod layout;
 pub mod soft_wta;
 pub mod init_rand;
 pub mod conv_shape;
@@ -31,7 +27,6 @@ pub mod from_usize;
 pub mod mat_slice;
 
 pub mod cayley;
-pub mod blas_safe;
 
 mod mat_arr;
 pub use mat_arr::*;

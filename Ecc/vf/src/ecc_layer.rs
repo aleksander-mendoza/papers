@@ -2,7 +2,7 @@
 
 // pub struct HardWtaL2{
 //     r_step:f32,
-//     W:
+//     W:Mat
 // r::AbstractVector{Real}
 // const norm
 // const w_step::Real
