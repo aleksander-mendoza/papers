@@ -31,7 +31,7 @@ pub fn interpolate_gaps(histogram: &mut [f32]) {
                         break;
                     }
                 }
-                debug_assert!((histogram[offset + j] == hist_j && hist_j != 0.) || (hist_j == 0. && j == 256));
+                debug_assert!((hist_j == 0. && j == 256) || (histogram[offset + j] == hist_j && hist_j != 0.));
                 debug_assert!(j >= i);
                 let delta_x = (j+1-i) as f32;
                 debug_assert!((i>0 && histogram[offset + i - 1] == prev_non_zero) || (i == 0 && prev_non_zero == 0.));
@@ -58,8 +58,8 @@ pub fn interpolate_gaps(histogram: &mut [f32]) {
 
             }else{
                 i += 1;
-                debug_assert_ne!(histogram[offset+i-1], 0.);
-                debug_assert_eq!(hist_i, histogram[offset+i-1]);
+                debug_assert!(histogram[offset+i-1] != 0.);
+                debug_assert!(hist_i == histogram[offset+i-1]);
                 prev_non_zero = hist_i;
             }
         }

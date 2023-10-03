@@ -613,118 +613,106 @@ pub fn sparse_dot_t<'py>(dense: &'py PyArray2<f32>, sparse:&'py PyArray1<u32>)->
 }
 
 
-// #[pyfunction]
-// #[text_signature = "(v,s)"]
-// /// Binary-valued ordered soft-winner-takes-all. V are the strengths of inhibitory connections, s are the delays at which neurons fired,
-// /// si is a list of indices of those neurons that fired sorted by the order in which they fired. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
-// pub fn ordered_swta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>) -> PyResult<&'py PyArray1<bool>> {
-//     let winners = vf::soft_wta::or(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
-//     let w = winners.into_pyarray(v.py());
-//     Ok(w)
-// }
-
+#[pyfunction]
+#[text_signature = "(v,s,si)"]
+/// Binary-valued ordered soft-winner-takes-all. V are the strengths of inhibitory connections, s are the delays at which neurons fired,
+/// si is a list of indices of those neurons that fired sorted by the order in which they fired. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+pub fn ordered_swta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = vf::soft_wta::ordered_top_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() });
+    let w = winners.into_pyarray(v.py());
+    Ok(w)
+}
+#[pyfunction]
+#[text_signature = "(u,s,si)"]
+/// Binary-valued ordered soft-winner-takes-all. V are the strengths of inhibitory connections, s are the delays at which neurons fired,
+/// si is a list of indices of those neurons that fired sorted by the order in which they fired. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+pub fn ordered_swta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = vf::soft_wta::ordered_top_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { si.as_slice()?.iter().cloned() });
+    let w = winners.into_pyarray(u.py());
+    Ok(w)
+}
 #[pyfunction]
 #[text_signature = "(v,s)"]
-/// u is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = top_v_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
+/// v is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+pub fn swta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = vf::soft_wta::top_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
     let w = winners.into_pyarray(v.py());
     Ok(w)
 }
 
 #[pyfunction]
 #[text_signature = "(u,s)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = top_u_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
-    let w = winners.into_pyarray(u.py());
-    Ok(w)
-}
-
-#[pyfunction]
-#[text_signature = "(u,s)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = multiplicative_top_u_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
+/// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
+pub fn swta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
+    let winners = vf::soft_wta::top_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
     let w = winners.into_pyarray(u.py());
     Ok(w)
 }
 
 #[pyfunction]
 #[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(top_u_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+/// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
+pub fn swta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::top_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
 }
 
 #[pyfunction]
 #[text_signature = "(v,s,y)"]
-/// u is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
-pub fn soft_wta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(top_v_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+/// v is row-major. Element `v[k,j]==1` means neuron k (row) can inhibit neuron j (column).
+pub fn swta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::top_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(u,s,si,y)"]
+/// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
+pub fn ordered_swta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::ordered_top_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() }, unsafe { y.as_slice_mut()? }))
+}
+
+#[pyfunction]
+#[text_signature = "(v,s,si,y)"]
+/// v is row-major. Element `v[k,j]==1` means neuron k (row) can inhibit neuron j (column).
+pub fn ordered_swta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>, y: &'py PyArray1<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::ordered_top_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() }, unsafe { y.as_slice_mut()? }))
 }
 
 
 #[pyfunction]
 #[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+/// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
 /// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
 /// shape of y is [height, width, channels].
-pub fn soft_wta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_u_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+pub fn swta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::top_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
 }
 
 #[pyfunction]
 #[text_signature = "(v,s,y)"]
-/// v is row-major. Element v[j0,j1,k,j]==1 means neuron k (row) can inhibit neuron j (column).
+/// v is row-major. Element `v[j0,j1,k,j]==1` means neuron k (row) can inhibit neuron j (column).
 /// Shape of s is [height, width, channels], shape of v is [height, width, channels, channels],
 /// shape of y is [height, width, channels].
-pub fn soft_wta_v_conv_<'py>(v: &'py PyArray4<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_v_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+pub fn swta_v_conv_<'py>(v: &'py PyArray4<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::top_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
 }
 
 
 #[pyfunction]
 #[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
+/// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
 /// Shape of s is [height, width, channels], shape of u is [channels, channels],
 /// shape of y is [height, width, channels].
-pub fn soft_wta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_u_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+pub fn swta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::top_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
 }
 
 #[pyfunction]
 #[text_signature = "(v,s,y)"]
-/// v is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
+/// v is row-major. Element `v[k,j]==1` means neuron k (row) can inhibit neuron j (column).
 /// Shape of s is [height, width, channels], shape of v is [channels, channels],
 /// shape of y is [height, width, channels].
-pub fn soft_wta_v_repeated_conv_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(top_v_repeated_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// u is row-major. Element u[k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(multiplicative_top_u_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
-///  shape of y is [height, width, channels].
-/// u is row-major. Element u[j0,j1,k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(multiplicative_top_u_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
-}
-
-#[pyfunction]
-#[text_signature = "(u,s,y)"]
-/// Shape of s is [height, width, channels], shape of u is [channels, channels],
-///  shape of y is [height, width, channels].
-/// u is row-major. Element u[j0,j1,k,j]==0 means neuron k (row) can inhibit neuron j (column).
-pub fn multiplicative_soft_wta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(multiplicative_top_u_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+pub fn swta_v_repeated_conv_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
+    Ok(vf::soft_wta::top_repeated_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
 }
 
 #[pyfunction]
@@ -1104,18 +1092,18 @@ fn ecc_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(conv_compose_array, m)?)?;
     m.add_function(wrap_pyfunction!(conv_compose, m)?)?;
     m.add_function(wrap_pyfunction!(conv_compose_weights, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_u, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_v, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_u_, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_v_, m)?)?;
-    m.add_function(wrap_pyfunction!(multiplicative_soft_wta_u_, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_u_conv_, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_v_conv_, m)?)?;
-    m.add_function(wrap_pyfunction!(multiplicative_soft_wta_u_conv_, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_u_repeated_conv_, m)?)?;
-    m.add_function(wrap_pyfunction!(soft_wta_v_repeated_conv_, m)?)?;
-    m.add_function(wrap_pyfunction!(multiplicative_soft_wta_u_repeated_conv_, m)?)?;
-    m.add_function(wrap_pyfunction!(multiplicative_soft_wta_u, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_u, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_v, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_u_, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_v_, m)?)?;
+    m.add_function(wrap_pyfunction!(ordered_swta_u, m)?)?;
+    m.add_function(wrap_pyfunction!(ordered_swta_v, m)?)?;
+    m.add_function(wrap_pyfunction!(ordered_swta_u_, m)?)?;
+    m.add_function(wrap_pyfunction!(ordered_swta_v_, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_u_conv_, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_v_conv_, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_u_repeated_conv_, m)?)?;
+    m.add_function(wrap_pyfunction!(swta_v_repeated_conv_, m)?)?;
     m.add_function(wrap_pyfunction!(sparse, m)?)?;
     m.add_function(wrap_pyfunction!(batch_sparse, m)?)?;
     m.add_function(wrap_pyfunction!(rand_sparse_k, m)?)?;
