@@ -15,7 +15,6 @@ use rand::Rng;
 use vf::soft_wta::*;
 use vf::{ArrayCast, conv, VecCast, VectorField, VectorFieldDivAssign, VectorFieldMul, VectorFieldMulAssign, VectorFieldOne, VectorFieldZero};
 use vf::{arr2, arr3, slice_as_arr, tup2, tup3, tup4, tup6};
-use vf::dynamic_layout::shape;
 use vf::init::InitEmptyWithCapacity;
 use vf::top_k::argsort;
 use crate::util::{arrX, py_any_as_numpy};

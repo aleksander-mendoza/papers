@@ -18,7 +18,6 @@ pub mod dot_arr;
 pub mod top_k;
 pub mod static_layout;
 pub mod init;
-pub mod dynamic_layout;
 pub mod dot_slice;
 pub mod shaped_tensor_mad;
 pub mod dot_sparse_arr;
@@ -32,12 +31,7 @@ pub mod from_usize;
 pub mod mat_slice;
 
 pub mod cayley;
-pub mod bezier;
-pub mod collision;
 pub mod blas_safe;
-pub mod mesh_primitives;
-pub mod piecewise_linear;
-pub mod line;
 
 mod mat_arr;
 pub use mat_arr::*;
@@ -56,8 +50,6 @@ mod norm;
 pub use norm::*;
 mod xyzw;
 pub use xyzw::*;
-mod lin_trans;
-pub use lin_trans::*;
 mod vector_field;
 pub use vector_field::*;
 mod vector_field_arr;
@@ -68,11 +60,6 @@ mod vector_field_slice;
 pub use vector_field_slice::*;
 mod set;
 pub use set::*;
-mod dot_mad_arr;
-pub use dot_mad_arr::*;
-mod lin_alg;
-pub use lin_alg::*;
-mod quat;
 pub mod histogram;
 mod num;
 mod vec;
@@ -82,5 +69,3 @@ pub mod ecc_layer;
 
 pub use vec::*;
 pub use num::*;
-
-pub use quat::*;
