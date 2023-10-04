@@ -4,13 +4,13 @@ use std::hash::Hash;
 use std::iter::{Step, Sum};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Range, Rem, Sub};
 use std::process::Output;
-use num_traits::{AsPrimitive, MulAdd, Num, One, PrimInt, Zero};
+use num_traits::{AsPrimitive, Float, MulAdd, Num, NumAssign, One, PrimInt, Zero};
 use crate::shape::Shape;
-use crate::{ArrayCast, conv, vec_range, VecCast, VectorField, VectorFieldAddAssign, VectorFieldOne, VectorFieldPartialOrd, VectorFieldSub};
+use crate::{ArrayCast, conv, normalize_mat_column, normalize_mat_rows, vec_range, VecCast, VectorField, VectorFieldAddAssign, VectorFieldOne, VectorFieldPartialOrd, VectorFieldSub};
 use crate::arr_concat::concat;
 use crate::xyzw::{xy3, xy_z3, xy_z_w4, xy_zw4, xyz3, z3};
 use crate::from_usize::FromUsize;
-use crate::init::InitEmptyWithCapacity;
+use crate::init::{InitEmptyWithCapacity, InitFilledCapacity};
 use crate::norm::{card, normalize_mat_columns};
 
 /**[height, width, channels]->[height, width]*/
@@ -51,7 +51,7 @@ pub fn sub_kernel_offset<Idx: Debug + Copy + Sub<Output=Idx>>(input_pos: &[Idx; 
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConvShape<Idx: Debug + PrimInt> {
     /**[in_height, in_width, in_channels]*/
     input_shape: [Idx; 3],
@@ -189,7 +189,7 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
         idx(self.out_shape().idx(output_pos), self.idx_within_kernel(input_pos, output_pos), self.out_volume())
     }
     /**conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_channels]*/
-    pub fn normalize_minicolumn<D: DivAssign + Copy>(&self, conv_tensor: &mut [D], norm_with_stride: impl Fn(&[D], usize) -> D) where Idx: AsPrimitive<usize> {
+    pub fn normalize_minicolumn<D: Float+NumAssign + Copy>(&self, conv_tensor: &mut [D], norm_with_stride: impl Fn(&[D], usize) -> D) where Idx: AsPrimitive<usize> {
         let in_v = self.kernel_column_volume().as_();
         let out_v = self.out_channels().as_();
         let v = in_v * out_v;
@@ -197,7 +197,7 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
         normalize_mat_columns(out_v, conv_tensor, norm_with_stride)
     }
     /**conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_height, out_width, out_channels]*/
-    pub fn normalize_kernel_columns<D: DivAssign + Copy>(&self, conv_tensor: &mut [D], norm_with_stride: impl Fn(&[D], usize) -> D) where Idx: AsPrimitive<usize> {
+    pub fn normalize_kernel_columns<D: Float+NumAssign + Copy>(&self, conv_tensor: &mut [D], norm_with_stride: impl Fn(&[D], usize) -> D) where Idx: AsPrimitive<usize> {
         let in_v = self.kernel_column_volume().as_();
         let out_v = self.out_volume().as_();
         let v = in_v * out_v;
@@ -238,13 +238,13 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
             });
         }
     }
-    /**rhs_conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_channels]. dot_product_output is of shape [out_height, out_width, out_channels]*/
+    /**lhs_tensor is of shape `[in_height, in_width, in_channels]`. rhs_conv_tensor is of shape `[kernel_height, kernel_width, in_channels, out_channels]`. dot_product_output is of shape [out_height, out_width, out_channels]*/
     pub fn sparse_dot_repeated_slice<D: AddAssign + Copy + Zero>(&self, lhs_tensor: &[Idx], rhs_conv_tensor: &[D]) -> Vec<D> where Idx: AsPrimitive<usize> + Step {
         let mut dot_product_output = vec![D::zero(); self.out_volume().as_()];
         self.sparse_dot_repeated_slice_(lhs_tensor, rhs_conv_tensor, &mut dot_product_output);
         dot_product_output
     }
-    /**rhs_conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_channels]. dot_product_output is of shape [out_height, out_width, out_channels]*/
+    /** lhs_tensor is of shape `[in_height, in_width, in_channels]`. rhs_conv_tensor is of shape `[kernel_height, kernel_width, in_channels, out_channels]`. dot_product_output is of shape `[out_height, out_width, out_channels]`*/
     pub fn sparse_dot_repeated_slice_<D: AddAssign + Copy>(&self, lhs_tensor: &[Idx], rhs_conv_tensor: &[D], dot_product_output: &mut [D]) where Idx: AsPrimitive<usize> + Step {
         debug_assert_eq!(rhs_conv_tensor.len(), self.minicolumn_w_shape().product().as_());
         debug_assert_eq!(dot_product_output.len(), self.out_volume().as_());
@@ -291,6 +291,28 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
             value = fold_per_kernel_column(value, output_idx)
         }
         value
+    }
+    /**This is useful when using repeated convolutional kernel. It takes a sparse tensor of all fired y neurons (of shape `[out_height, out_width, out_channels]`) and returns
+     a sparse tensor of unique output channels that fired (of shape `[out_channels]`)*/
+    pub fn unique_fired_output_neurons(&self,  y:&[Idx], mut callback:impl FnMut(Idx)) where Idx: AsPrimitive<usize> {
+        let mut fired = Vec::full(self.out_channels().as_(),false);
+        for &k in y{
+            let c:Idx = k % self.out_channels();
+            if !fired[c.as_()]{
+                callback(c);
+                fired[c.as_()] = true;
+            }
+        }
+    }
+    /**Normalizes weights of output neurons that fired at least once across entire convolution.
+     w_slice is a dense tensor of shape `[kernel_height, kernel_width, in_channels, out_channels]`, y is a sparse tensor of shape is
+     `[out_height, out_width, out_channels]`*/
+    pub fn sparse_repeated_normalize<D:Float+NumAssign+Copy>(&self, w_slice:&mut [D], y:&[Idx], norm_with_stride: impl Fn(&[D], usize) -> D) where Idx: AsPrimitive<usize> {
+        debug_assert_eq!(w_slice.len(),self.minicolumn_w_shape().product().as_());
+        let n_columns = self.kernel_column_volume().as_();
+        self.unique_fired_output_neurons(y,|k|{
+            normalize_mat_column(n_columns,k.as_(),w_slice, &norm_with_stride)
+        })
     }
     /**It works like XWY where X is a row vector, W is a matrix and Y is a column vector,
                             except that this function works with convolutional topology of weights W and the vectors
@@ -563,6 +585,15 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
     pub fn minicolumn_receptive_field_shape(&self)->[Idx;4]{
         let [kh,kw] = self.kernel;
         [self.out_channels(),kh,kw,self.in_channels()]
+    }
+    /**Adds vector `v` (of shape `[out_channels]`) to every minicolumn of output tensor `out` (of shape `[out_height,out_width,out_channels]`)*/
+    pub fn add_vector_repeated<D:AddAssign+Copy>(v:&[D], out:&mut [D]) {
+        let mut offset = 0;
+        while offset < out.len(){
+            let end = offset+v.len();
+            out[offset..end].add_(v);
+            offset = end;
+        }
     }
     /**minicolumn_receptive_field is of shape [out_channels,kernel_height, kernel_width, in_channels]*/
     pub fn add_to_receptive_field_repeated<D:AddAssign+One>(&self, minicolumn_receptive_field:&mut [D], x:&[Idx], y: &[Idx]) where Idx: AsPrimitive<usize> {

@@ -278,19 +278,27 @@ impl ConvShape {
         let Range { start, end } = self.cs.out_range(&arr2(input_pos));
         (tup2(start), tup2(end))
     }
-    #[text_signature = "(conv_tensor)"]
+    #[text_signature = "(conv_tensor, norm)"]
     /// conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_height, out_width, out_channels]
     pub fn normalize_kernel_columns(&self, conv_tensor: &PyArray6<f32>, norm: usize) {
         assert_eq!(conv_tensor.shape(),self.cs.w_shape().as_scalar::<usize>().as_slice(), "Convolutional tensor shape is wrong");
         let rhs = unsafe{conv_tensor.as_slice_mut()}.expect("Convolutional weights tensor is not continuous");
         self.cs.normalize_kernel_columns(rhs, vf::l(norm));
     }
-    #[text_signature = "(conv_tensor)"]
+    #[text_signature = "(conv_tensor, norm)"]
     /// conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_channels]
     pub fn normalize_minicolumn(&self, conv_tensor: &PyArray4<f32>, norm: usize) {
         assert_eq!(conv_tensor.shape(),self.cs.minicolumn_w_shape().as_scalar::<usize>().as_slice(), "Convolutional tensor shape is wrong");
         let rhs = unsafe{conv_tensor.as_slice_mut()}.expect("Convolutional weights tensor is not continuous");
         self.cs.normalize_minicolumn(rhs, vf::l(norm));
+    }
+    #[text_signature = "(conv_tensor, y, norm)"]
+    /// conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_channels]
+    pub fn sparse_repeated_normalize(&self, conv_tensor: &PyArray4<f32>, y:&PyArray1<u32>, norm: usize) {
+        assert_eq!(conv_tensor.shape(),self.cs.minicolumn_w_shape().as_scalar::<usize>().as_slice(), "Convolutional tensor shape is wrong");
+        let rhs = unsafe{conv_tensor.as_slice_mut()}.expect("Convolutional weights tensor is not continuous");
+        let y = unsafe{y.as_slice_mut()}.expect("Output sparse tensor is not continuous");
+        self.cs.sparse_repeated_normalize(rhs, y,vf::l(norm));
     }
     #[text_signature = "(input_pos, output_pos)"]
     pub fn idx(&self, input_pos: (Idx,Idx,Idx), output_pos: (Idx,Idx,Idx)) -> Idx { self.cs.idx(&arr3(input_pos), &arr3(output_pos)) }
@@ -524,7 +532,7 @@ pub fn sample(probabilities:&PyArrayDyn<f32>)->PyResult<&PyArrayDyn<bool>>{
 /// Optionally (if std_dev is provided) the values can be treated as means of gaussian distributions with the provided standard deviation.
 pub fn sample_of_cardinality(values:&PyArrayDyn<f32>, cardinality:usize, std_dev:Option<f32>)->PyResult<&PyArrayDyn<bool>>{
     let p = unsafe{values.as_slice()?};
-    let sorted_indices = if let Some(std_dev) = std_dev{
+    let sorted_indices:Vec<usize> = if let Some(std_dev) = std_dev{
         let mut rng = rand::thread_rng();
         let mut dist = rand_distr::Normal::new(0f32,std_dev).map_err(|e|PyValueError::new_err(format!("{}", e)))?;
         let tmp:Vec<f32> = p.iter().map(|v|v+dist.sample(&mut rng)).collect();
@@ -634,7 +642,7 @@ pub fn ordered_swta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, si:&'py
 #[text_signature = "(v,s)"]
 /// v is row-major. Element v[k,j]==1 means neuron k (row) can inhibit neuron j (column).
 pub fn swta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = vf::soft_wta::top_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? });
+    let winners = vf::soft_wta::top_slice(unsafe { v.as_slice()? }, unsafe { s.as_slice()? },|_|());
     let w = winners.into_pyarray(v.py());
     Ok(w)
 }
@@ -643,7 +651,7 @@ pub fn swta_v<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>) -> PyResult<&'
 #[text_signature = "(u,s)"]
 /// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
 pub fn swta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'py PyArray1<bool>> {
-    let winners = vf::soft_wta::top_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? });
+    let winners = vf::soft_wta::top_slice(unsafe { u.as_slice()? }, unsafe { s.as_slice()? },|_|());
     let w = winners.into_pyarray(u.py());
     Ok(w)
 }
@@ -652,28 +660,28 @@ pub fn swta_u<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>) -> PyResult<&'p
 #[text_signature = "(u,s,y)"]
 /// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
 pub fn swta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::top_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::top_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 #[pyfunction]
 #[text_signature = "(v,s,y)"]
 /// v is row-major. Element `v[k,j]==1` means neuron k (row) can inhibit neuron j (column).
 pub fn swta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::top_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::top_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 #[pyfunction]
 #[text_signature = "(u,s,si,y)"]
 /// u is row-major. Element `u[k,j]==0` means neuron k (row) can inhibit neuron j (column).
 pub fn ordered_swta_u_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::ordered_top_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::ordered_top_slice_(unsafe { u.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 #[pyfunction]
 #[text_signature = "(v,s,si,y)"]
 /// v is row-major. Element `v[k,j]==1` means neuron k (row) can inhibit neuron j (column).
 pub fn ordered_swta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, si:&'py PyArray1<u32>, y: &'py PyArray1<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::ordered_top_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::ordered_top_slice_(unsafe { v.as_slice()? }, unsafe { s.as_slice()? },unsafe { si.as_slice()?.iter().cloned() }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 
@@ -683,7 +691,7 @@ pub fn ordered_swta_v_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray1<f32>, si:&'
 /// Shape of s is [height, width, channels], shape of u is [height, width, channels, channels],
 /// shape of y is [height, width, channels].
 pub fn swta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::top_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::top_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 #[pyfunction]
@@ -692,7 +700,7 @@ pub fn swta_u_conv_<'py>(u: &'py PyArray4<f32>, s: &'py PyArray3<f32>, y: &'py P
 /// Shape of s is [height, width, channels], shape of v is [height, width, channels, channels],
 /// shape of y is [height, width, channels].
 pub fn swta_v_conv_<'py>(v: &'py PyArray4<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::top_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::top_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 
@@ -702,7 +710,7 @@ pub fn swta_v_conv_<'py>(v: &'py PyArray4<bool>, s: &'py PyArray3<f32>, y: &'py 
 /// Shape of s is [height, width, channels], shape of u is [channels, channels],
 /// shape of y is [height, width, channels].
 pub fn swta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::top_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::top_repeated_conv_(slice_as_arr(y.shape()),unsafe { u.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 #[pyfunction]
@@ -711,7 +719,7 @@ pub fn swta_u_repeated_conv_<'py>(u: &'py PyArray2<f32>, s: &'py PyArray3<f32>, 
 /// Shape of s is [height, width, channels], shape of v is [channels, channels],
 /// shape of y is [height, width, channels].
 pub fn swta_v_repeated_conv_<'py>(v: &'py PyArray2<bool>, s: &'py PyArray3<f32>, y: &'py PyArray3<u8>) -> PyResult<()> {
-    Ok(vf::soft_wta::top_repeated_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? }))
+    Ok(vf::soft_wta::top_repeated_conv_(slice_as_arr(y.shape()),unsafe { v.as_slice()? }, unsafe { s.as_slice()? }, unsafe { y.as_slice_mut()? },|_|()))
 }
 
 #[pyfunction]

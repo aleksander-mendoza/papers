@@ -16,7 +16,6 @@ extern crate core;
 pub mod conv;
 pub mod top_k;
 pub mod init;
-pub mod shaped_tensor_mad;
 pub mod dot_sparse_arr;
 pub mod shape;
 pub mod soft_wta;
@@ -28,8 +27,6 @@ pub mod mat_slice;
 
 pub mod cayley;
 
-mod mat_arr;
-pub use mat_arr::*;
 pub use statrs::*;
 pub use levenshtein::*;
 mod mat_tri;
@@ -37,8 +34,6 @@ pub use mat_tri::*;
 pub use levenshtein::*;
 mod arr_concat;
 pub use arr_concat::*;
-mod shape_arr;
-pub use shape_arr::*;
 mod tup_arr;
 pub use tup_arr::*;
 mod norm;

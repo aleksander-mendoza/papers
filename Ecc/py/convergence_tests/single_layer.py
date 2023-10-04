@@ -112,7 +112,7 @@ class SoftWta:
         # 2 = not determined yet and soft_wta_u_ will compute it
         # Therefore we set all neurons below the threshold to 0 so that we rule them out. The remaining neurons
         # are set to 2 co now they will compete with each other as usual according to rules of Soft-WTA.
-        ecc_py.soft_wta_u_(self.U, s, y)
+        ecc_py.swta_u_(self.U, s, y)
         y = y.view(bool)
         if learn:
             self.W[np.ix_(x, y)] += self.W_step

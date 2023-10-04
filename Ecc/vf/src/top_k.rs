@@ -1,5 +1,8 @@
 use std::cmp::Ordering;
 use std::cmp::Ordering::{Greater, Less};
+use std::iter::Step;
+use num_traits::AsPrimitive;
+use crate::from_usize::FromUsize;
 
 pub fn top_small_k_indices<V: Copy + PartialOrd>(mut k: usize, n: usize, f: impl Fn(usize) -> V) -> Vec<(usize, V)> {
     debug_assert!(k <= n);
@@ -97,8 +100,8 @@ mod tests {
         }
     }
 }
-pub fn argsort<T>(data: &[T], compare:impl Fn(&T,&T)->Ordering) -> Vec<usize> {
-    let mut indices = (0..data.len()).collect::<Vec<_>>();
-    indices.sort_by(|&i,&j| compare(&data[i],&data[j]));
+pub fn argsort<Idx:FromUsize+AsPrimitive<usize>,T>(data: &[T], compare:impl Fn(&T,&T)->Ordering) -> Vec<Idx> {
+    let mut indices = (0..data.len()).map(Idx::from_usize).collect::<Vec<Idx>>();
+    indices.sort_by(|i,j| compare(&data[i.as_()],&data[j.as_()]));
     indices
 }
