@@ -1,4 +1,5 @@
 use std::ops::{Add, AddAssign, Mul};
+use more_asserts::debug_assert_lt;
 use crate::init::{InitFilledCapacity};
 use num_traits::{MulAdd, Zero};
 
@@ -23,9 +24,12 @@ pub fn dot1<I: num_traits::AsPrimitive<usize>, T: AddAssign + Copy + Zero>(lhs: 
     dot1_(lhs,rhs,&mut o);
     o
 }
+/**adds to output. Remember to zero-out the output yourself prior to using this method*/
 pub fn dot1_<I: num_traits::AsPrimitive<usize>, T: AddAssign + Copy + Zero>(lhs: &[I], rhs: &[T], output:&mut [T])  {
     let columns = output.len();
+    debug_assert_eq!(rhs.len() % columns, 0);
     for row in lhs{
+        debug_assert_lt!(row.as_(),rhs.len() / columns, "rhs.len()={} row={} columns={}",rhs.len(), row.as_(), columns);
         let offset = columns * row.as_();
         output.iter_mut().zip(&rhs[offset..offset+columns]).for_each(|(o,&d)|*o+=d);
     }

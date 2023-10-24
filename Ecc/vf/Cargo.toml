@@ -12,6 +12,7 @@ doctest = false
 rand = "0.8.4"
 num-traits = "*"
 itertools = "0.10.3"
+more-asserts = "0.3.1"
 levenshtein = "*"
 statrs = "0.16"
 num-complex = "*"

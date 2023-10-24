@@ -25,6 +25,11 @@ impl Swta for f32{
     }
 }
 
+pub fn top_repeated_conv<T:Swta>(y_shape:&[usize;3], u:&[T], s:&[f32], mut winner_callback: impl FnMut(usize))->Vec<bool>{
+    let mut y:Vec<u8> = vec![NULL;y_shape.product()];
+    top_repeated_conv_(y_shape,u,s,&mut y, winner_callback);
+    unsafe{std::mem::transmute(y)}
+}
 /**shape of s is `[height, width, channels]`, shape of u is `[channels, channels]`,
  shape of y is `[height, width, channels]`. u is C-contiguous.
  Element `s[k,j]==0` means neuron k (row) can inhibit neuron j (column).*/
@@ -36,9 +41,9 @@ pub fn top_repeated_conv_<T:Swta>(y_shape:&[usize;3], u:&[T], s:&[f32], y:&mut [
     assert_eq!(u.len(),c*c);
     for j0 in 0..y_shape[0]{
         for j1 in 0..y_shape[1]{
-            let y_from_j = (j0*c+j1)*c;
+            let y_from_j = (j0*y_shape[1]+j1)*c;
             let y_to_j = y_from_j+c;
-            top_slice_(u,&s[y_from_j..y_to_j],&mut y[y_from_j..y_to_j], &mut winner_callback)
+            top_slice_(u,&s[y_from_j..y_to_j],&mut y[y_from_j..y_to_j], |k|winner_callback(y_from_j+k))
         }
     }
 }
@@ -119,8 +124,9 @@ pub fn ordered_top<T:Swta, I:AsPrimitive<usize>>(u:impl Fn(usize,usize)->T,s:&[f
 
 #[cfg(test)]
 mod tests {
+    use crate::conv_shape::ConvShape;
     use crate::init_rand::InitRandWithCapacity;
-    use crate::VectorFieldPartialOrd;
+    use crate::{dense_to_sparse, VectorFieldPartialOrd};
     use super::*;
 
 
@@ -185,5 +191,18 @@ mod tests {
             }
         }
 
+    }
+    #[test]
+    fn test_conv(){
+        let sc = ConvShape::new_in([32,32,3], 4,[4,4],[1,1]);
+        let s = Vec::rand(sc.out_volume());
+        let u = Vec::<f32>::rand(sc.minicolumn_u_shape().product().as_());
+        let mut y1 = vec![NULL; s.len()];
+        sc.for_each_minicolumn(&s,|offset,minicolumn|{
+            top_slice_(&u,&minicolumn,&mut y1[offset..offset+sc.out_channels()],|_|{})
+        });
+        let y2 = top_repeated_conv(sc.out_shape(),&u,&s,|_|{});
+        let y1:Vec<bool> = unsafe{std::mem::transmute(y1)};
+        assert_eq!(y1,y2);
     }
 }

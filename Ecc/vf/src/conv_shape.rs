@@ -4,9 +4,10 @@ use std::hash::Hash;
 use std::iter::{Step, Sum};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Range, Rem, Sub};
 use std::process::Output;
-use num_traits::{AsPrimitive, Float, MulAdd, Num, NumAssign, One, PrimInt, Zero};
+use num_traits::{AsPrimitive, Float, MulAdd, Num, NumAssign, NumAssignOps, One, PrimInt, Zero};
+use rand::distributions::Standard;
 use crate::shape::Shape;
-use crate::{ArrayCast, conv, normalize_mat_column, normalize_mat_rows, vec_range, VecCast, VectorField, VectorFieldAddAssign, VectorFieldOne, VectorFieldPartialOrd, VectorFieldSub};
+use crate::{ArrayCast, conv, normalize_mat_column, normalize_mat_rows, rand_dense, rand_set, vec_range, VecCast, VectorField, VectorFieldAddAssign, VectorFieldOne, VectorFieldPartialOrd, VectorFieldSub};
 use crate::arr_concat::concat;
 use crate::xyzw::{xy3, xy_z3, xy_z_w4, xy_zw4, xyz3, z3};
 use crate::from_usize::FromUsize;
@@ -53,13 +54,13 @@ pub fn sub_kernel_offset<Idx: Debug + Copy + Sub<Output=Idx>>(input_pos: &[Idx; 
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConvShape<Idx: Debug + PrimInt> {
-    /**[in_height, in_width, in_channels]*/
+    /**`[in_height, in_width, in_channels]`*/
     input_shape: [Idx; 3],
-    /**[out_height, out_width, out_channels]*/
+    /**`[out_height, out_width, out_channels]`*/
     output_shape: [Idx; 3],
-    /**[kernel_height, kernel_width]*/
+    /**`[kernel_height, kernel_width]`*/
     kernel: [Idx; 2],
-    /**[height, width]*/
+    /**`[height, width]`*/
     stride: [Idx; 2],
 }
 
@@ -91,6 +92,8 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
     pub fn kernel(&self) -> &[Idx; 2] {
         &self.kernel
     }
+    pub fn kernel_height(&self)->Idx{self.kernel[0]}
+    pub fn kernel_width(&self)->Idx{self.kernel[1]}
     /**[height, width]*/
     pub fn stride(&self) -> &[Idx; 2] {
         &self.stride
@@ -102,6 +105,40 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
     /**[in_height, in_width, in_channels]*/
     pub fn input_shape(&self) -> [Idx; 3] {
         self.in_shape().clone()
+    }
+    /**random binary vector of shape [in_height, in_width, in_channels]*/
+    pub fn rand_dense_input(&self, cardinality:Idx) -> Vec<bool> where Idx: AsPrimitive<usize>+Step+Hash+NumAssignOps, Standard: rand::distributions::Distribution<Idx> {
+        rand_dense(cardinality,self.in_volume())
+    }
+    pub fn rand_dense_output(&self, cardinality:Idx) -> Vec<bool> where Idx: AsPrimitive<usize>+Step+Hash+NumAssignOps, Standard: rand::distributions::Distribution<Idx> {
+        rand_dense(cardinality,self.out_volume())
+    }
+    /**sparse repr. of random binary vector of shape [in_height, in_width, in_channels]*/
+    pub fn rand_sparse_input(&self, cardinality:Idx) -> Vec<Idx> where Idx: AsPrimitive<usize>+Step+Hash+NumAssignOps, Standard: rand::distributions::Distribution<Idx> {
+        rand_set(cardinality,Idx::zero()..self.in_volume())
+    }
+    pub fn rand_sparse_output(&self, cardinality:Idx) -> Vec<Idx> where Idx: AsPrimitive<usize>+Step+Hash+NumAssignOps, Standard: rand::distributions::Distribution<Idx> {
+        rand_set(cardinality,Idx::zero()..self.out_volume())
+    }
+    /**Convolves a custom function with some input vector `x` of shape `[in_height, in_width, in_channels]`.
+     */
+    pub fn conv<D:Copy>(&self, x:&[D], mut f:impl FnMut(Idx, &[D])) where Idx: AsPrimitive<usize> + Step{
+        for out_y in Idx::zero()..self.out_height(){
+            for out_x in Idx::zero()..self.out_width(){
+                let kernel_column = self.kernel_column_to_vec(&x,out_y,out_x);
+                f((out_y*self.out_width()+out_x)*self.out_channels(),&kernel_column)
+            }
+        }
+    }
+    /**Convolves a custom function with some output vector `y` of shape `[out_height, out_width, out_channels]`. Each minicolumn has shape `[out_channels]`
+     */
+    pub fn for_each_minicolumn<D:Copy>(&self, y:&[D], mut f:impl FnMut(Idx, &[D])) where Idx: AsPrimitive<usize> + Step{
+        for out_y in Idx::zero()..self.out_height(){
+            for out_x in Idx::zero()..self.out_width(){
+                let offset = (out_y*self.out_width()+out_x)*self.out_channels();
+                f(offset,&y[offset.as_()..offset.as_()+self.out_channels().as_()])
+            }
+        }
     }
     /**[kernel_height, kernel_width, in_channels, out_channels]*/
     pub fn minicolumn_w_shape(&self) -> [Idx; 4] {
@@ -161,6 +198,7 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
     pub fn in_volume(&self) -> Idx where Idx: Mul<Output=Idx> + One {
         self.in_shape().product()
     }
+    /**`output_pos==[output_y,output_x, output_channel]`, returned value is `[input_offset_y, input_offset_x]`*/
     pub fn kernel_offset(&self, output_pos: &[Idx; 3]) -> [Idx; 2] where Idx: Mul<Output=Idx> {
         conv::in_range_begin(grid(output_pos), self.stride())
     }
@@ -204,6 +242,34 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
         assert_eq!(conv_tensor.len(), v);
         normalize_mat_columns(out_v, conv_tensor, norm_with_stride)
     }
+    /**input_tensor is of shape `[in_height, in_width, in_channels]`.
+         `output_y` and `output_x` are coordinates of kernel column whose input patch will be copied.
+         `kernel_column_tensor` is a tensor of shape `[kernel_height, kernel_width, in_channels]`*/
+    pub fn copy_kernel_column<D:Copy>(&self, input_tensor: &[D], kernel_column_tensor:&mut[D], output_y:Idx, output_x:Idx) where Idx: AsPrimitive<usize>+Step {
+        assert_eq!(input_tensor.len(), self.in_volume().as_());
+        assert_eq!(kernel_column_tensor.len(), self.kernel_column_volume().as_());
+        let [offset_y,offset_x] = self.kernel_offset(&[output_y, output_x, Idx::zero()]);
+        let mut j = 0;
+        for y in offset_y..offset_y+self.kernel_height(){
+            for x in offset_x..offset_x+self.kernel_width(){
+                for c in Idx::zero()..self.in_channels(){
+                    let i = self.in_shape().idx(&[y,x,c]);
+                    kernel_column_tensor[j] = input_tensor[i.as_()];
+                    j+=1;
+                }
+            }
+        }
+        debug_assert_eq!(j, kernel_column_tensor.len());
+    }
+    /**input_tensor is of shape `[in_height, in_width, in_channels]`.
+     `output_y` and `output_x` are coordinates of kernel column whose input patch will be copied.
+     Output is a tensor of shape `[kernel_height, kernel_width, in_channels]`*/
+    pub fn kernel_column_to_vec<D:Copy>(&self, input_tensor: &[D], output_y:Idx, output_x:Idx) -> Vec<D> where Idx: AsPrimitive<usize>+Step {
+        let in_v = self.kernel_column_volume().as_();
+        let mut v:Vec<D> = Vec::empty(in_v);
+        self.copy_kernel_column(input_tensor,&mut v, output_y,output_x);
+        v
+    }
     /**rhs_conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_height, out_width, out_channels].
         dot_product_output is of shape [out_height, out_width, out_channels]*/
     pub fn sparse_dot_slice<D: AddAssign + Copy + Zero>(&self, lhs_tensor: &[Idx], rhs_conv_tensor: &[D]) -> Vec<D> where Idx: AsPrimitive<usize> + Step + Hash {
@@ -244,7 +310,8 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
         self.sparse_dot_repeated_slice_(lhs_tensor, rhs_conv_tensor, &mut dot_product_output);
         dot_product_output
     }
-    /** lhs_tensor is of shape `[in_height, in_width, in_channels]`. rhs_conv_tensor is of shape `[kernel_height, kernel_width, in_channels, out_channels]`. dot_product_output is of shape `[out_height, out_width, out_channels]`*/
+    /** lhs_tensor is of shape `[in_height, in_width, in_channels]`. rhs_conv_tensor is of shape `[kernel_height, kernel_width, in_channels, out_channels]`. dot_product_output is of shape `[out_height, out_width, out_channels]`.
+     This function adds to dot_product_output so make sure to zero it out yourself before calling it*/
     pub fn sparse_dot_repeated_slice_<D: AddAssign + Copy>(&self, lhs_tensor: &[Idx], rhs_conv_tensor: &[D], dot_product_output: &mut [D]) where Idx: AsPrimitive<usize> + Step {
         debug_assert_eq!(rhs_conv_tensor.len(), self.minicolumn_w_shape().product().as_());
         debug_assert_eq!(dot_product_output.len(), self.out_volume().as_());
@@ -588,10 +655,21 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
     }
     /**Adds vector `v` (of shape `[out_channels]`) to every minicolumn of output tensor `out` (of shape `[out_height,out_width,out_channels]`)*/
     pub fn add_vector_repeated<D:AddAssign+Copy>(v:&[D], out:&mut [D]) {
+        debug_assert_eq!(out.len()%v.len(),0);
         let mut offset = 0;
         while offset < out.len(){
             let end = offset+v.len();
             out[offset..end].add_(v);
+            offset = end;
+        }
+    }
+    /**Copies vector `v` (of shape `[out_channels]`) to every minicolumn of output tensor `out` (of shape `[out_height,out_width,out_channels]`)*/
+    pub fn copy_vector_repeated<D:AddAssign+Copy>(v:&[D], out:&mut [D]) {
+        debug_assert_eq!(out.len()%v.len(),0);
+        let mut offset = 0;
+        while offset < out.len(){
+            let end = offset+v.len();
+            out[offset..end].copy_from_slice(v);
             offset = end;
         }
     }

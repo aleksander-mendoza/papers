@@ -15,6 +15,7 @@ use rand::Rng;
 use vf::soft_wta::*;
 use vf::{ArrayCast, conv, VecCast, VectorField, VectorFieldDivAssign, VectorFieldMul, VectorFieldMulAssign, VectorFieldOne, VectorFieldZero};
 use vf::{arr2, arr3, slice_as_arr, tup2, tup3, tup4, tup6};
+use vf::ecc_layer::Layer;
 use vf::init::InitEmptyWithCapacity;
 use vf::top_k::argsort;
 use crate::util::{arrX, py_any_as_numpy};
@@ -206,6 +207,26 @@ impl ConvShape {
     ///[kernel_height, kernel_width]
     #[getter]
     pub fn kernel(&self) -> (Idx,Idx) { tup2(self.cs.kernel().clone()) }
+    #[getter]
+    pub fn kernel_height(&self)->Idx{self.cs.kernel_height()}
+    #[getter]
+    pub fn kernel_width(&self)->Idx{self.cs.kernel_width()}
+    #[text_signature = "(cardinality)"]
+    pub fn rand_dense_input(&self, cardinality:Idx) -> Vec<bool>{
+        self.cs.rand_dense_input(cardinality)
+    }
+    #[text_signature = "(cardinality)"]
+    pub fn rand_dense_output(&self, cardinality:Idx) -> Vec<bool>{
+        self.cs.rand_dense_output(cardinality)
+    }
+    #[text_signature = "(cardinality)"]
+    pub fn rand_sparse_input(&self, cardinality:Idx) -> Vec<Idx> {
+        self.cs.rand_sparse_input(cardinality)
+    }
+    #[text_signature = "(cardinality)"]
+    pub fn rand_sparse_output(&self, cardinality:Idx) -> Vec<Idx>{
+        self.cs.rand_sparse_output(cardinality)
+    }
     ///[height, width]
     #[getter]
     pub fn stride(&self) -> (Idx,Idx) { tup2(self.cs.stride().clone()) }
@@ -1078,6 +1099,61 @@ pub fn conv_nearest(img: &PyArray2<u8>, kernel_height:usize, kernel_width:usize)
     Ok(out)
 }
 
+
+///
+/// HwtaL2Layer(shape: ConvShape, norm: int)
+///
+#[pyclass]
+pub struct HwtaL2Layer {
+    pub(crate) l: vf::ecc_layer::HwtaL2Layer<Idx>,
+}
+
+#[pymethods]
+impl HwtaL2Layer {
+    #[new]
+    pub fn new(cs:&ConvShape, norm:usize) -> Self {
+        Self{l:vf::ecc_layer::HwtaL2Layer::new(cs.cs.clone(), norm)}
+    }
+    /// returns the ConvShape object
+    #[getter]
+    fn shape(&self) -> ConvShape {
+        ConvShape{cs:self.l.shape().clone()}
+    }
+    #[getter]
+    fn n(&self) -> Idx {
+        self.l.n()
+    }
+    #[getter]
+    fn m(&self) -> Idx {
+        self.l.m()
+    }
+    ///x is a sparse representation of binary vector of shape `[n]`, output is a sparse repr. of bin. vec. of shape `[m]`
+    #[text_signature = "(x)"]
+    fn run(&self, x: &PyArray1<Idx>) -> &PyArray1<Idx>{
+        let xi = unsafe{x.as_slice()}?;
+        PyArray1::from_vec(x.py(),self.l.run_into_vec(xi))
+    }
+    ///x is a sparse representation of binary vector of shape `[n]`, y is a sparse repr. of bin. vec. of shape `[m]`
+    #[text_signature = "(x, y)"]
+    fn learn(&mut self, x: &PyArray1<Idx>, y: &PyArray1<Idx>) {
+        let xi = unsafe{x.as_slice()}?;
+        let yi = unsafe{y.as_slice()}?;
+        self.l.learn(xi,yi)
+    }
+    ///x is a sparse representation of binary matrix of shape `[in_height, in_width, in_channels]`, output is a sparse repr. of bin. mat. of shape `[out_height, out_width, out_channels]`
+    #[text_signature = "(x)"]
+    fn run_conv(&self, x: &PyArray1<Idx>) -> &PyArray1<Idx>{
+        let xi = unsafe{x.as_slice()}?;
+        PyArray1::from_vec(x.py(),self.l.run_conv_into_vec(xi))
+    }
+
+    ///x is a sparse representation of binary matrix of shape `[in_height, in_width, in_channels]`, y is a sparse repr. of bin. mat. of shape `[out_height, out_width, out_channels]`
+    fn learn_conv(&mut self, x: &PyArray1<Idx>, y: &PyArray1<Idx>) {
+        let xi = unsafe{x.as_slice()}?;
+        let yi = unsafe{y.as_slice()}?;
+        self.l.learn_conv(xi,yi)
+    }
+}
 
 /// A Python module implemented in Rust. The name of this function must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to

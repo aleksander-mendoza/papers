@@ -122,7 +122,7 @@ class SoftWta:
             # Either uses cosine similarity s_k * s_j or differential s_k - s_j
             u_update = np.outer(s, s) if self.cos_sim else sk_minus_sj
             # Differential can be turned into euclidean distance
-            u_update = abs(sk_minus_sj) if self.use_abs else u_update
+            u_update = abs(u_update) if self.use_abs else u_update
             if self.conditional:  # U = E[u_update | s_k > s_j]
                 mask = sk_minus_sj > 0
                 self.U[y] *= 1 - mask * self.U_step
