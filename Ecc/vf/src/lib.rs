@@ -55,6 +55,7 @@ mod num;
 mod vec;
 pub mod dot_sparse_slice;
 pub mod ecc_layer;
+pub mod ecc_machine;
 
 
 pub use vec::*;

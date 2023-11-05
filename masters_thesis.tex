@@ -1288,6 +1288,7 @@ Some notable properties of binary vectors are
 	\[p(\langle\boldsymbol{x},\boldsymbol{x}'\rangle\ge b | \boldsymbol{x})=\frac{\sum_{\dot{b}=b}^{c'}\Omega_{\boldsymbol{x}}(\dot{b})}{\binom{n}{c}}\]
 	\item The probability of random $\boldsymbol{x}'$ being a subset of $\boldsymbol{x}$ is
 	\[p(\boldsymbol{x}'\subset\boldsymbol{x})=\frac{2^{\lVert\boldsymbol{x}\rVert_1}}{\binom{n}{\lVert\boldsymbol{x}\rVert_1}}\]
+	\label{theorem:sparse_bin_vecs_basics}
 \end{enumerate}
 \end{theorem}
 The last two probabilities decrease factorially quickly with length $n$. For very sparse vectors, the chance of accidental overlap is almost zero. 
@@ -1890,6 +1891,7 @@ In the special case when bits are unkorrelated $C=I$ we have
 Consider $U \in \mathbb{R}^{m\times m}$. Suppose that $0\le s_j\le 1$ (which holds if columns $W_j$ are normalized to $a_j=1$ and $\boldsymbol{s}=\boldsymbol{x} W$). 
 We say that $y_j$ is \textit{shunned} by $y_k$ if $s_j+u_{kj}<s_k$ and $y_k=1$. 
 \textit{Real-valued soft-WTA} is the operation $\boldsymbol{y}=\swta_U \boldsymbol{s}$ returning $\boldsymbol{y}$ such that $y_j=1$ if and only if there does not exist any $y_k$ such that  $y_j$ is shunned by $y_k$.
+\label{definition:real_valued_swta}
 \end{definition}
 \begin{theorem}
 Let $\boldsymbol{r}\in \mathbb{R}^m$ and put $u_{kj}=r_j-r_k$. Then real-valued soft-WTA will almost surely yield identical output as hard-WTA with entropy maximization (formally $\swta_U \boldsymbol{s}= \argmax \boldsymbol{s}+\boldsymbol{r}$). 
@@ -1907,7 +1909,7 @@ Put $V=1-U$ and consider $v_{kj} \in \{0,1\}$. If $v_{kj}=1$ then $u_{kj}=0$, he
 In the general case, continuous values of $U$ can be adjusted independently (without $\boldsymbol{r}$) and incrementally using local Hebbian rules. 
 
 \subsection{Bursting ECC and empirical benchmarks}
-Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their korrelation $\mathbb{E}(s_j s_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. Of course, if all $v_{kj}$ equal $1$ then all bits are mutually exclusive and dekorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, learning $U$ is the problem of minimizing korrelation $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
+Bits $y_j,y_k$ with similar $W_j,W_k$ will likely fire together and their korrelation $\mathbb{E}(s_j s_k)$ will be high. Decorrelation, which is an essential part of slow feature analysis, can be achieved by setting $v_{kj}=v_{jk}=1$. If all $v_{kj}$ equal $1$ then all bits are mutually exclusive and dekorrelation $p(y_j|y_k) = 0$ for $j\ne k$ is guaranteed, but such arrangement is not very interesting. Therefore, learning $U$ is the problem of minimizing korrelation $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$, while at the same time minimizing $v_{kj}$. These two goals contradict each other, thus a trade-off  must be made. A reasonable assumption is that if an unusual input $\boldsymbol{x}$ causes two uncorrelated neurons $y_j,y_k$ (with distant $W_j,W_k$) to fire, they should not interfere with each other ($v_{kj}=v_{jk}=0$). 
 \begin{definition}
 	\textit{Slow binary feature analysis} (SBFA) problem is formulated as minimization of both $\frac{d\boldsymbol{y}}{dt}$ and korrelation $\mathbb{E}(\boldsymbol{y}^T \boldsymbol{y})$.  The $\frac{d\boldsymbol{y}}{dt}$ is to be understood as $\frac{d\boldsymbol{y}}{dt}=\lVert y_{t+1}-y{t} \rVert$.
 \end{definition}
@@ -2018,6 +2020,8 @@ When $\boldsymbol{r}$ is a constant vector then independent ECC becomes a Rosenb
 The entropy maximization algorithm can be defined analogically. 
 \fi
 
+\paragraph{Notation} We use $[T]$ to denote the set of finite sequences (also called lists) of elements of some set $T$. Notation $[t_1,t_2,t_3,...t_k] \in [T]$ is used to write down a sequence explicitly. If $T$ is a totally ordered set then sequence comprehension notation $[t : P(t)]$ is used to denote a sequence of all $t\in T$ in increasing order for which predicate $P(t)$ holds. We use notation $[n]$ to denote set of sequences of natural numbers $[\mathbb{N}]$ such that every element $n_i$ of $[n_1,n_2,...n_k]\in [n]$ is between $1 \le n_i \le n$. Cardinality $\lVert \boldsymbol{x} \rVert$ is the length of the sequence $\boldsymbol{x}$.
+
 Sparse binary vectors $\boldsymbol{x}$ can be represented as a list $[i:x_i=1]$ of indices $i$ at which $x_i=1$. This allows for very efficient implementation.
 \begin{example} \label{example:ecc_efficient_impl}
 An implementation (in Rust) is able to process 2000 MNIST images per second on a single thread of 2.7 GHz Intel i5 core. Each image is 25x25 pixels. The network has 734400 weights. When learning was enabled, it could train on 1700 images per second. 
@@ -2043,22 +2047,135 @@ A binary vector $\boldsymbol{x}$ of cardinality $c$ can be represented by a list
 The ECC algorithm (as in example \ref{example:ecc_efficient_impl}) is invariant to the exact permutation of indices.
 From ECC perspective $[i : x_i=1]$ is a set $\{i : x_i=1\}$. Could we use the order of indices to encode additional information and improve our model of neural networks?
 
+
 \begin{definition}
-Ordered binary vector $\boldsymbol{x}\in [\boldmath{N}]$ is a sequence of unique indices $[i_1,i_2,...]$. Cardinality $\lVert \boldsymbol{x} \rVert$ is the length of the sequence.
+Ordered binary vector $\boldsymbol{x}\in [n]$ is a sequence of indices $[i_1,i_2,...]$ such that all its elements are unique. The operation ${}^*$ returns an (unordered) binary vector $\boldsymbol{x}^* \in \{0,1\}^n$ corresponding to $\boldsymbol{x}$ (every binary vector is an equivalence class on ordered binary vectors).
 \end{definition}
+
 The sequence of indices can be used to encode the order in which spikes arrive to $\boldsymbol{y}$ neurons. The first index $i$ belongs to the input neuron $x_i$ that spiked first. Neurons that are the quickest to respond to a certain stimulus  carry the most information, hence, the first index is the most important one. The output $\boldsymbol{y}$ is also an ordered binary vector and the order of spikes is determined by $\boldsymbol{s}$.
 \begin{definition}
 Let $\boldsymbol{x}=[i_1,i_2,...,i_c]$.
 The $\boldsymbol{x}^{(h)}\in \{0,1\}^n$ is binary vector such that $x^{(h)}_{i_1}=x^{(h)}_{i_2}=...=x^{(h)}_{i_{min(c,h)}}=1$ and the other bits are zero.
 \end{definition}
-Biological neurons have a firing threshold, let it be $\boldsymbol{a}\in \mathbb{R}^m$. Spike timing dependent plasticity says connections $w_{ij}$ to neurons $x_i$ that fired before $y_j$ has fired should be strengthened, while those that fired afterwards should be weakened. Therefore if $h$ is the smallest number that results in $\boldsymbol{x}^{(h)} W_j = s_j > a_j$ then $w_{i_1}j,w_{i_2}j,...,w_{i_h}j$ should be strengthened, while the remaining $w_{i_{h+1}}j,...,w_{i_c}j$ should be weakened. The threshold $a_j$ could be modulated to achieve entropy maximization. 
+\begin{lemma}
+Converting ordered $\boldsymbol{x}\in [n]$ to unordered $\boldsymbol{x}^*\in\{0,1\}^n$ is equivalent to taking $\boldsymbol{x}^{(n)}$.
+\end{lemma}
+
+In theorem \ref{theorem:sparse_bin_vecs_basics} we used inner product $\langle \boldsymbol{x},\boldsymbol{x}' \rangle$ to measure overlap between binary vectors $\{0,1\}^n$. Comparing ordered binary vectors can be done in many different ways. 
 
 \begin{definition}
-Let $\alpha$ be a constant. (rate of action potential decay)
+Let $\langle \boldsymbol{x},\boldsymbol{x}' \rangle_*$ be the similarity measured as
+\[
+\langle \boldsymbol{x},\boldsymbol{x}' \rangle_* = \sum_{t=1}^{n} \langle \boldsymbol{x}^{(t)},\boldsymbol{x}'^{(t)} \rangle
+\]
+where $\boldsymbol{x},\boldsymbol{x}' \in [n]$. 
 \end{definition}
 \begin{definition}
-Distance between ordered binary vectors 
+Ordered binary vector $\boldsymbol{x}\in [n]$ is unit if its cardinality is equal $\lVert \boldsymbol{x} \rVert=n$.  
 \end{definition}
+\begin{definition}
+For any $\boldsymbol{s}\in \mathbb{R}^n$ we define $[\boldsymbol{s}]\in [n]$ to be the unit binary vector $[\boldsymbol{s}]=[i_1,i_2,...,i_n]$ such that $s_{i_1} \le s_{i_2} \le ... \le s_{i_n}$. When equality $s_{i_k}=s_{i_{k+1}}$ occurs then the order is unspecified (arbitrary).   
+\end{definition}
+\begin{lemma}
+The similarity $\langle \boldsymbol{x},\boldsymbol{x}' \rangle_*$ of unit binary vectors is 
+\begin{itemize}
+	\item bounded from below by $\langle [1,2,...,n],[n,...,2,1] \rangle_* = 0+0+...+(n-4)+(n-2)+n=\lceil \frac{n}{2} \rceil  (\lfloor \frac{n}{2} \rfloor + 1)$.
+	\item bounded from above by $\langle [1,2,...,n],[1,2,...,n] \rangle_* = 1+2+...+n = \frac{(1+n)n}{2}$.
+	\item invariant to permutations $\pi:\{1,...,n\}\rightarrow \{1,...,n\}$ applied to both vectors 
+	$\langle [i_1,...,i_n],[j_1,...,j_n] \rangle_*=\langle [\pi i_1,...,\pi i_n],[\pi j_1,...,\pi j_n] \rangle_*$ 
+\end{itemize}
+\end{lemma}
+
+\begin{definition}
+The star product $\boldsymbol{x} * W_j$ between ordered binary vector $\boldsymbol{x}\in [n]$ and real vector $W_j \in \mathbb{R}^n$ is defined as \[\boldsymbol{x} * W_j=\sum_{t=1}^{n} \boldsymbol{x}^{(h)} W_j\]
+\end{definition}
+\begin{definition}
+Let $\boldsymbol{x}=[i_1,i_2,...] \in [n]$. Order vector $\hat{\boldsymbol{x}} \in \{1...n\}^n$ is defined as
+\begin{equation*}
+\hat{x}_{k} = \begin{cases}
+		n-t+1 & \text{exists } t  \text{ s.t. } k=i_t\\
+		0 &\text{otherwise}
+	\end{cases}
+\end{equation*}
+\end{definition}
+\begin{lemma}
+Let $\boldsymbol{x}\in [n]$, $W_j \in\mathbb{R}^n$ and $\hat{\boldsymbol{x}} \in \{1...n\}^n$ is the order vector of $\boldsymbol{x}$.
+Then the star product $\boldsymbol{x} * W_j$ is equal to dot product $\hat{\boldsymbol{x}} W_j$.
+\end{lemma}
+\begin{definition}
+Star product $\boldsymbol{x} * W$ between ordered binary vector $\boldsymbol{x}\in [n]$ and real matrix $W \in\mathbb{R}^{n\times m}$ is defined as dot product $\boldsymbol{x} * W = \hat{\boldsymbol{x}} W$.
+\end{definition}
+\begin{definition} Spike-time-dependent ECC algorithm with decay function  $\phi$ 
+\begin{lstlisting}
+input $\boldsymbol{x} = [i_1,i_2,...] \in [n]$
+$\boldsymbol{s}$ := $\boldsymbol{r}$ 
+for $t$ in $1$...$\lVert \boldsymbol{x} \rVert$   
+    for $j$ in $1$...$m$
+        $s_j$ := $ s_j + \phi(t) w_{i_tj}$ 
+continue with either hard- or soft-wta
+\end{lstlisting}
+
+\end{definition}
+\begin{lemma}
+If $\phi(t) = n - t + 1$ then STD-ECC is equivalent to
+\begin{lstlisting}
+input $\boldsymbol{x} = [i_1,i_2,...] \in [n]$
+$\boldsymbol{s}$ := $\boldsymbol{r} + \boldsymbol{x} * W$ (equivalently $\boldsymbol{s}$ := $\boldsymbol{r} + \hat{\boldsymbol{x}}W$)
+continue with either hard- or soft-wta
+\end{lstlisting}
+\end{lemma}
+It is worth observing that $\hat{\boldsymbol{x}}$ is not a binary vector. As a result $\boldsymbol{s}$ is no longer between $0$ and $1$. How does this affect WTA mechanics and learning?
+
+For hard-WTA ($k = \argmax \boldsymbol{s}$) the range of values of $\boldsymbol{s}$ does not matter. Work of binary-valued soft-WTA (theorem \ref{theorem:algorithm_for_swta}) will also be unaffected but read-valued soft-WTA 
+requires $0 \le s_j \le 1$ (theorem \ref{definition:real_valued_swta}). To address this we note that elements of $\hat{\boldsymbol{x}}$ take integer value between $\lceil \frac{n}{2} \rceil  (\lfloor \frac{n}{2} \rfloor + 1)$ and $\frac{(n+1)n}{n}$, and thus can be normalized with some constants $a,b:\mathbb{R}$ to ensure $0 \le \lVert a + b \hat{\boldsymbol{x}} \lVert_1 \le 1$. In a sense, this generalizes ECC to real-valued input, while retaining the computational efficiency advantage of working with sparse binary vectors. The soft-WTA algorithm can be further generalized to work with ordered binary vectors.
+\begin{definition}
+Spike-time-dependent real-valued soft-WTA algorithm
+\begin{lstlisting}
+input $\overrightarrow{\boldsymbol{s}}:\mathbb{R}^m$, $\boldsymbol{s}:[m]$
+initialize $\boldsymbol{y}:[m]$ := $[]$ and $\overrightarrow{\boldsymbol{y}}: \{0,1,\emptyset\}^m$ := $[\emptyset,...,\emptyset] $ 
+for $k$ in $\boldsymbol{s}$
+    if $\overrightarrow{y}_k = \emptyset$
+        push $k$ onto $\boldsymbol{y}$
+        $\overrightarrow{y}_k$ := 1
+        for $j$ such that $\overrightarrow{s}_j + u_{kj}<\overrightarrow{s}_k$
+            $\overrightarrow{y}_j$ := 0 
+return $\boldsymbol{y}$
+\end{lstlisting}
+\end{definition}
+\begin{lemma}
+If $\boldsymbol{s}$ is the unit binary vector $\boldsymbol{s}=[\overrightarrow{\boldsymbol{s}}]$ then STP soft-WTA is equivalent to soft-WTA on unordered binary vectors. 
+\end{lemma}
+\begin{proof}
+Note that when $\overrightarrow{\boldsymbol{s}}$ contains equal elements $\overrightarrow{s}_j =\overrightarrow{s}_k$, the end result $\boldsymbol{y}$ is the same no matter which of $j$ or $k$ comes first in $\boldsymbol{s}$. This is  because $\overrightarrow{s}_j + u_{kj}<\overrightarrow{s}_k$ is always false if $\overrightarrow{s}_j =\overrightarrow{s}_k$. 
+\end{proof}
+
+The STD soft-WTA requires $\boldsymbol{s}:[m]$ but so far our STD ECC does not specify how to compute it. There may be several approaches. One is to set a certain threshold $\boldsymbol{a}\in \mathbb{R}^m$, loop over $\boldsymbol{x}:[n]$ and add $j$ to $\boldsymbol{s}$ as soon as $s_j$ exceeds $a_j$. This has certain resemblance to the firing threshold of biological neurons. 
+
+\begin{definition} Spiking ECC algorithm is a combination of STD ECC with STD soft-WTA
+\begin{lstlisting}
+input $\boldsymbol{x} = [i_1,i_2,...] \in [n]$
+$\boldsymbol{y}:[m]$ := $[]$  
+$\overrightarrow{\boldsymbol{y}}: \{0,1,\emptyset\}^m$ := $[\emptyset,...,\emptyset] $ 
+$\boldsymbol{s}:\mathbb{R}^m$ := $-\boldsymbol{a}$ 
+for $t$ in $1$...$\lVert \boldsymbol{x} \rVert$   
+    for $k$ in $1$...$m$
+        $s_k$ := $ s_k + \phi(t) w_{i_tk}$ 
+        if $s_k > 0$ and $\overrightarrow{y}_k = \emptyset$
+            push $k$ onto $\boldsymbol{y}$
+            $\overrightarrow{y}_k$ := 1
+            for $j$ such that $\overrightarrow{s}_j + u_{kj}<\overrightarrow{s}_k$
+                $\overrightarrow{y}_j$ := 0 
+return $\boldsymbol{y}$
+\end{lstlisting}
+\end{definition}
+
+
+
+
+ Spike timing dependent plasticity says connections $w_{ij}$ to neurons $x_i$ that fired before $y_j$ has fired should be strengthened, while those that fired afterwards should be weakened. Therefore if $h$ is the smallest number that results in $\boldsymbol{x}^{(h)} W_j = s_j > a_j$ then $w_{i_1}j,w_{i_2}j,...,w_{i_h}j$ should be strengthened, while the remaining $w_{i_{h+1}}j,...,w_{i_c}j$ should be weakened. The threshold $a_j$ could be modulated to achieve entropy maximization. 
+
+
+
 
 
 

@@ -21,7 +21,7 @@ L2 = True
 METRIC_STR = "l2" if L2 else "l1"
 SAMPLES = 60000
 DIR = 'predictive_coding_stacked8/' + METRIC_STR + "/" + str(SAMPLES)
-l.
+
 ENTROPY_MAXIMISATION = True
 MACHINE_TYPE = ecc.CpuEccMachineL2 if L2 else ecc.CpuEccMachine
 DENSE_TYPE = ecc.CpuEccDenseL2 if L2 else ecc.CpuEccDense

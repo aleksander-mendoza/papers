@@ -183,8 +183,11 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> Layer<Idx> fo
 }
 
 #[derive(Clone, PartialEq)]
-pub struct SwtaLayer<Idx: Debug + PrimInt, const COS_SIM: bool, const CONDITIONAL: bool, const USE_ABS: bool> {
+pub struct SwtaLayer<Idx: Debug + PrimInt> {
     shape: ConvShape<Idx>,
+    pub cos_sim: bool,
+    pub conditional: bool,
+    pub use_abs: bool,
     pub W_step: f32,
     pub U_step: f32,
     /// of shape  `[kernel_height, kernel_width, in_channels, out_channels]`
@@ -195,13 +198,13 @@ pub struct SwtaLayer<Idx: Debug + PrimInt, const COS_SIM: bool, const CONDITIONA
     norm: usize,
 }
 
-impl<Idx: Debug + PrimInt, const COS_SIM: bool, const CONDITIONAL: bool, const USE_ABS: bool> Debug for SwtaLayer<Idx, COS_SIM, CONDITIONAL, USE_ABS> {
+impl<Idx: Debug + PrimInt> Debug for SwtaLayer<Idx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Swta({:?})", self.shape)
     }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize>, const COS_SIM: bool, const CONDITIONAL: bool, const USE_ABS: bool> SwtaLayer<Idx, COS_SIM, CONDITIONAL, USE_ABS> {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize>> SwtaLayer<Idx> {
     pub fn new(shape: ConvShape<Idx>, norm: usize) -> Self {
         let mut W = Vec::rand(shape.minicolumn_w_shape().product().as_());
         let U = Vec::rand(shape.minicolumn_u_shape().product().as_());
@@ -209,6 +212,9 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize>, const COS_SIM: bool, const CONDI
         normalize_mat_columns(width, &mut W, l(norm));
         Self {
             shape,
+            cos_sim: true,
+            conditional: false,
+            use_abs: false,
             W_step: 0.01,
             U_step: 0.01,
             W,
@@ -219,27 +225,12 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize>, const COS_SIM: bool, const CONDI
     }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize, const COS_SIM: bool, const CONDITIONAL: bool, const USE_ABS: bool> Layer<Idx> for SwtaLayer<Idx, COS_SIM, CONDITIONAL, USE_ABS> {
-    fn shape(&self) -> &ConvShape<Idx> {
-        &self.shape
-    }
-
-    fn run_(&self, x: &[Idx], s: &mut [f32], winner_callback: impl FnMut(usize)) {
-        s.fill(0.);
-        debug_assert_lt!(x.iter().max().cloned().unwrap_or(Idx::zero()).as_(), self.n().as_(), "{:?}", x);
-        dot1_(x, &self.W, s);
-        debug_assert_eq!(s.len(), self.m().as_());
-        let mut y: Vec<u8> = s.iter().map(|&s_j| if s_j > self.threshold { NULL } else { 0 }).collect();
-        debug_assert_eq!(y.len(), self.m().as_());
-        crate::soft_wta::top_slice_(&self.U, &s, &mut y, winner_callback);
-    }
-
-    fn learn(&mut self, x: &[Idx], s: &[f32], y: &[Idx]) {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> SwtaLayer<Idx> {
+    fn _learn_<const COS_SIM: bool, const CONDITIONAL: bool, const USE_ABS: bool>(&mut self, x: &[Idx], s: &[f32], y: &[Idx]){
         let m = self.m().as_();
         let Self {
-            shape, W_step, U_step,
-            W, U,
-            threshold, norm
+             W_step, U_step,
+            W, U, norm, ..
         } = self;
         for i in x {
             for k in y {
@@ -261,6 +252,54 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize, const COS_SIM
             }
         }
     }
+}
+
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> Layer<Idx> for SwtaLayer<Idx> {
+    fn shape(&self) -> &ConvShape<Idx> {
+        &self.shape
+    }
+
+    fn run_(&self, x: &[Idx], s: &mut [f32], winner_callback: impl FnMut(usize)) {
+        s.fill(0.);
+        debug_assert_lt!(x.iter().max().cloned().unwrap_or(Idx::zero()).as_(), self.n().as_(), "{:?}", x);
+        dot1_(x, &self.W, s);
+        debug_assert_eq!(s.len(), self.m().as_());
+        let mut y: Vec<u8> = s.iter().map(|&s_j| if s_j > self.threshold { NULL } else { 0 }).collect();
+        debug_assert_eq!(y.len(), self.m().as_());
+        crate::soft_wta::top_slice_(&self.U, &s, &mut y, winner_callback);
+    }
+
+    fn learn(&mut self, x: &[Idx], s: &[f32], y: &[Idx]) {
+        if self.cos_sim{
+            if self.conditional{
+                if self.use_abs{
+                    self._learn_::<true,true,true>(x,s,y);
+                }else{
+                    self._learn_::<true,true,false>(x,s,y);
+                }
+            }else{
+                if self.use_abs{
+                    self._learn_::<true,false,true>(x,s,y);
+                }else{
+                    self._learn_::<true,false,false>(x,s,y);
+                }
+            }
+        }else{
+            if self.conditional{
+                if self.use_abs{
+                    self._learn_::<false,true,true>(x,s,y);
+                }else{
+                    self._learn_::<false,true,false>(x,s,y);
+                }
+            }else{
+                if self.use_abs{
+                    self._learn_::<false,false,true>(x,s,y);
+                }else{
+                    self._learn_::<false,false,false>(x,s,y);
+                }
+            }
+        }
+    }
 
     fn run_conv_(&self, x: &[Idx], s: &mut [f32], mut winner_callback: impl FnMut(usize)) {
         s.fill(0.);
@@ -270,14 +309,7 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize, const COS_SIM
     }
 
     fn learn_conv(&mut self, x: &[Idx], s: &[f32], y: &[Idx]) {
-        let Self { shape, U_step, W, norm, W_step, .. } = self;
-        let n_columns = shape.kernel_column_volume().as_();
-        let norm = norm.as_();
-        shape.sparse_unbiased_increment_repeated(W, *W_step, x, y);
-        shape.unique_fired_output_neurons(y, |k| {
-            normalize_mat_column(n_columns, k.as_(), W, l(norm));
-            // r[k.as_()] -= *r_step;
-        });
+        unimplemented!();
     }
 }
 
@@ -314,7 +346,7 @@ mod tests {
 
     #[test]
     fn test2() {
-        let mut s1 = SwtaLayer::<u32,false,false,false>::new(ConvShape::new_linear(10, 8), 2);
+        let mut s1 = SwtaLayer::<u32>::new(ConvShape::new_linear(10, 8), 2);
         let mut s2 = s1.clone();
         let x = s1.shape().rand_sparse_input(3);
         let y1 = s1.run_into_vec(&x);
@@ -328,7 +360,7 @@ mod tests {
     #[test]
     fn test4() {
         let sc = ConvShape::new_in([32, 32, 6], 8, [4, 4], [1, 1]);
-        let mut s1 = SwtaLayer::<u32,false,false,false>::new(sc.clone(), 2);
+        let mut s1 = SwtaLayer::<u32>::new(sc.clone(), 2);
         let mut s2 = s1.clone();
         let x = s1.shape().rand_dense_input(600);
         let mut y1 = Vec::<u32>::new();
