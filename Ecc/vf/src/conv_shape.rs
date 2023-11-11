@@ -7,13 +7,13 @@ use std::process::Output;
 use num_traits::{AsPrimitive, Float, MulAdd, Num, NumAssign, NumAssignOps, One, PrimInt, Zero};
 use rand::distributions::Standard;
 use crate::shape::Shape;
-use crate::{ArrayCast, conv, normalize_mat_column, normalize_mat_rows, rand_dense, rand_set, vec_range, VecCast, VectorField, VectorFieldAddAssign, VectorFieldOne, VectorFieldPartialOrd, VectorFieldSub};
+use crate::{ArrayCast, conv, normalize_mat_column, normalize_mat_rows, rand_dense, rand_set, sparse_subtensor, vec_range, VecCast, VectorField, VectorFieldAddAssign, VectorFieldOne, VectorFieldPartialOrd, VectorFieldSub, VectorFieldSubAssign, xy3_};
 use crate::arr_concat::concat;
 use crate::xyzw::{xy3, xy_z3, xy_z_w4, xy_zw4, xyz3, z3};
 use crate::from_usize::FromUsize;
 use crate::init::{InitEmptyWithCapacity, InitFilledCapacity};
 use crate::norm::{card, normalize_mat_columns};
-
+use serde::{Serialize,Deserialize};
 /**[height, width, channels]->[height, width]*/
 pub fn grid<X>(arr: &[X; 3]) -> &[X; 2] {
     xy3(arr)
@@ -52,8 +52,8 @@ pub fn sub_kernel_offset<Idx: Debug + Copy + Sub<Output=Idx>>(input_pos: &[Idx; 
 }
 
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConvShape<Idx: Debug + PrimInt> {
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ConvShape<Idx: Debug + PrimInt + NumAssign> {
     /**`[in_height, in_width, in_channels]`*/
     input_shape: [Idx; 3],
     /**`[out_height, out_width, out_channels]`*/
@@ -64,7 +64,7 @@ pub struct ConvShape<Idx: Debug + PrimInt> {
     stride: [Idx; 2],
 }
 
-impl<Idx: Debug + PrimInt> ConvShape<Idx> {
+impl<Idx: Debug + PrimInt + NumAssign> ConvShape<Idx> {
     /**[kernel_height, kernel_width, in_channels, out_height, out_width, out_channels]*/
     pub fn w_shape(&self) -> [Idx; 6] {
         let [kernel_height, kernel_width] = self.kernel().clone();
@@ -241,6 +241,28 @@ impl<Idx: Debug + PrimInt> ConvShape<Idx> {
         let v = in_v * out_v;
         assert_eq!(conv_tensor.len(), v);
         normalize_mat_columns(out_v, conv_tensor, norm_with_stride)
+    }
+    pub fn sparse_kernel_column_input_subset(&self, sparse_input:&[Idx], output_pos:&[Idx;2])->Vec<Idx>{
+        let region = self.in_range(output_pos);
+        sparse_input.iter().cloned().filter(|&i|{
+            let pos = self.input_shape.pos(i);
+            let yx = xy3(&pos);
+            region.start.all_le(yx) && yx.all_lt(&region.end)
+        }).collect()
+    }
+    pub fn sparse_kernel_column_input_subset_reindexed(&self, sparse_input:&[Idx], output_pos:&[Idx;2])->Vec<Idx>{
+        let region = self.in_range(output_pos);
+        let kc = self.kernel_column_shape();
+        sparse_input.iter().cloned().filter_map(|i|{
+            let mut pos = self.input_shape.pos(i);
+            let yx = xy3(&pos);
+            if region.start.all_le(yx) && yx.all_lt(&region.end){
+                xy3_(&mut pos).sub_(&region.start);
+                Some(kc.idx(&pos))
+            }else{
+                None
+            }
+        }).collect()
     }
     /**input_tensor is of shape `[in_height, in_width, in_channels]`.
          `output_y` and `output_x` are coordinates of kernel column whose input patch will be copied.
@@ -723,7 +745,9 @@ mod tests {
     use super::*;
     use rand::{random, SeedableRng};
     use crate::init_rand::InitRandWithCapacity;
-    use crate::{rand_set, VectorFieldAddOwned, VectorFieldRemOwned};
+    use crate::{dense_to_sparse, rand_set, sparse_subtensor_reindexed, VectorFieldAddOwned, VectorFieldRemOwned};
+    use crate::conv::in_range;
+
     #[test]
     fn test1() {
         let S = 5;
@@ -850,5 +874,69 @@ mod tests {
             let o1 = shape.sparse_dot_slice(&x, &w);
             assert_eq!(o0, o1);
         }
+    }
+
+    #[test]
+    fn test7(){
+        let c = ConvShape::new_in([28,24,8],7,[4,4],[1,1]);
+        for _ in 0..5 {
+            let input = rand_set(400, 0..c.in_volume());
+            let out_pos = [rand::random::<u32>() % c.out_height(), rand::random::<u32>() % c.out_width()];
+            let s1 = c.sparse_kernel_column_input_subset(&input, &out_pos);
+            let region = c.in_range(&out_pos);
+            let region = xy_z3(region.start, 0)..xy_z3(region.end, c.in_channels());
+            let s2 = sparse_subtensor(&input, c.in_shape(), region);
+            assert_eq!(s1, s2);
+        }
+
+    }
+    #[test]
+    fn test8(){
+        let c = ConvShape::new_in([28,24,8],7,[4,4],[1,1]);
+        for _ in 0..5 {
+            let input = rand_set(400, 0..c.in_volume());
+            let out_pos = [rand::random::<u32>() % c.out_height(), rand::random::<u32>() % c.out_width()];
+            let s1 = c.sparse_kernel_column_input_subset_reindexed(&input, &out_pos);
+            let region = c.in_range(&out_pos);
+            let region = xy_z3(region.start, 0)..xy_z3(region.end, c.in_channels());
+            let s2 = sparse_subtensor_reindexed(&input, c.in_shape(), region);
+            assert_eq!(s1, s2);
+        }
+
+    }
+    #[test]
+    fn test9(){
+        let o = dense_to_sparse(&[
+            true,false,false,false,
+            true,true,false,false,
+            false,false,true,false,
+            false,false,false,false,
+        ]);
+        let c = ConvShape::new_in([8,8,1],1,[4,4],[4,4]);
+        let i = dense_to_sparse(&[
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, true,false,false,false,
+            false, false, false, false, true,true,false,false,
+            false, false, false, false, false,false,true,false,
+            false, false, false, false, false,false,false,false,
+        ]);
+        assert_eq!(sparse_subtensor_reindexed(&i, &[8,8],[4,4]..[8,8]), o);
+        assert_eq!( c.sparse_kernel_column_input_subset_reindexed(&i, &[1,1]), o);
+
+        let i = dense_to_sparse(&[
+            false, false, false, false, true,false,false,false,
+            false, false, false, false, true,true,false,false,
+            false, false, false, false, false,false,true,false,
+            false, false, false, false, false,false,false,false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false,
+        ]);
+        assert_eq!(sparse_subtensor_reindexed(&i, &[8,8],[0,4]..[4,8]), o);
+        assert_eq!( c.sparse_kernel_column_input_subset_reindexed(&i, &[0,1]), o);
     }
 }

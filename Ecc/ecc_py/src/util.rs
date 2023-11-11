@@ -10,6 +10,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter};
 use pyo3::exceptions::PyValueError;
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
 
 
 macro_rules! impl_save_load {
@@ -98,7 +99,7 @@ pub fn pickle<T: Serialize>(val: &T, file: String) -> PyResult<()> {
 pub fn ocl_err_to_py_ex(e: impl ToString) -> PyErr {
     PyValueError::new_err(e.to_string())
 }
-pub fn unpickle<T:Deserialize<'static>>(file: String) -> PyResult<T> {
+pub fn unpickle<T:DeserializeOwned>(file: String) -> PyResult<T> {
     let o = OpenOptions::new()
         .read(true)
         .open(file)

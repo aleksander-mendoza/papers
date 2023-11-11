@@ -6,8 +6,11 @@ use num_traits::{AsPrimitive, NumAssignOps, One, PrimInt, Zero};
 use std::ops::{Add, AddAssign, Range, Rem, Sub};
 use partial_sort::{partial_sort, PartialSort};
 use rand::distributions::{Distribution, Standard};
+use rayon::prelude::*;
 use crate::from_usize::FromUsize;
-use crate::init::InitFilledCapacity;
+use crate::init::{InitEmptyWithCapacity, InitFilledCapacity};
+use crate::shape::Shape;
+use crate::{VectorFieldPartialOrd, VectorFieldSub};
 
 pub trait SetCardinality {
     /**Set cardinality is the number of its member elements*/
@@ -245,6 +248,11 @@ pub fn rand_set<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinality
     add_unique_random(|n|!set.insert(n),cardinality, range);
     set.into_iter().collect()
 }
+pub fn rand_set_sorted<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinality: N, range: Range<N>) -> Vec<N> where Standard: Distribution<N>{
+    let mut r = rand_set(cardinality,range);
+    r.sort();
+    r
+}
 pub fn rand_dense<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinality: N, length:N) -> Vec<bool> where Standard: Distribution<N>{
     let mut s = Vec::full(length.as_(),false);
     add_unique_random(|n| {
@@ -254,6 +262,7 @@ pub fn rand_dense<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinali
     },cardinality, N::zero()..length);
     s
 }
+
 //     /**Randomly picks some neurons that a present in other SDR but not in self SDR.
 //     Requires that both SDRs are already normalized.
 //     It will only add so many elements so that self.len() <= n*/
@@ -298,18 +307,55 @@ pub fn rand_dense<N:PrimInt+AsPrimitive<usize>+Step+Hash+NumAssignOps>(cardinali
 //     }
 //
 // }
-
+pub fn sparse_subtensor<const DIM:usize,Idx: PrimInt+Copy+Debug>(sparse_tensor:&[Idx], tensor_shape:&[Idx;DIM], subtensor:Range<[Idx;DIM]>)->Vec<Idx>{
+    sparse_tensor.iter().cloned().filter(|&i|{
+        let pos = tensor_shape.pos(i);
+        subtensor.start.all_le(&pos) && pos.all_lt(&subtensor.end)
+    }).collect()
+}
+pub fn sparse_subtensor_reindexed<const DIM:usize,Idx: PrimInt+Copy+Debug>(sparse_tensor:&[Idx], tensor_shape:&[Idx;DIM], subtensor:Range<[Idx;DIM]>)->Vec<Idx>{
+    let subshape = subtensor.end.sub(&subtensor.start);
+    sparse_tensor.iter().cloned().filter_map(|i|{
+        let pos = tensor_shape.pos(i);
+        if subtensor.start.all_le(&pos) && pos.all_lt(&subtensor.end){
+            Some(subshape.idx(&pos.sub(&subtensor.start)))
+        }else{
+            None
+        }
+    }).collect()
+}
+pub fn join_sets<Idx:Copy, I:AsRef<[Idx]>+Send+Sync>(sparse:&[I])->(Vec<Idx>,Vec<usize>){
+    let mut offsets = Vec::with_capacity(sparse.len()+1);
+    let mut offset = 0;
+    offsets.push(offset);
+    for s in sparse{
+        offset += s.as_ref().len();
+        offsets.push(offset);
+    }
+    let mut indices:Vec<Idx> = Vec::empty(offset);
+    let ptr = indices.as_mut_ptr() as usize;
+    sparse.into_par_iter().enumerate().for_each(|(i,s)|{
+        let offset = offsets[i];
+        let ptr = ptr as *mut Idx;
+        for (i, val) in s.as_ref().iter().cloned().enumerate(){
+            unsafe{ptr.offset((offset+i) as isize).write(val)}
+        }
+    });
+    (indices, offsets)
+}
 /**Returns a single vector containing indices of all true boolean values.
-The second vector contains offsets to the first one. It works just like Vec<Vec<Idx>> but is flattened.*/
+The second vector contains offsets to the first one. It works just like Vec<Vec<Idx>> but is flattened.
+ To get the i-th slice just do `indices[offsets[i]..offsets[i+1]]` . The number of slices is `offsets.len()-1` */
 pub fn batch_dense_to_sparse<Idx: FromUsize>(batch_size: usize, bools: &[bool]) -> (Vec<Idx>, Vec<usize>) {
     assert_eq!(bools.len() % batch_size, 0);
     let mut from = 0;
     let mut indices = Vec::<Idx>::new();
     let mut offsets = Vec::<usize>::with_capacity(bools.len() / batch_size);
+    offsets.push(indices.len());
     while from < bools.len() {
         let to = from + batch_size;
         dense_to_sparse_(&bools[from..to], &mut indices);
-        offsets.push(to);
+        offsets.push(indices.len());
         from = to;
     }
     (indices, offsets)
@@ -367,10 +413,12 @@ pub fn rle_to_mat<Idx: AsPrimitive<usize>>(rle:&[Idx], bools: &mut [bool]){
 
 #[cfg(test)]
 mod tests {
+    use more_asserts::{assert_ge, assert_le};
     use super::*;
     use rand::SeedableRng;
     use crate::init::InitEmptyWithCapacity;
     use crate::init_rand::InitRandWithCapacity;
+    use crate::VectorFieldSubAssign;
 
 
     #[test]
@@ -467,5 +515,30 @@ mod tests {
         let mut mat2 = Vec::empty(mat.len());
         rle_to_mat(&rle, &mut mat2);
         assert_eq!(&mat,&mat2);
+    }
+
+    #[test]
+    fn test9() {
+        let i = rand_set(100,0..300);
+        let len = 30;
+        let o = rand::random::<i32>() % (300-len);
+        let mut s1 = sparse_subtensor(&i,&[300], [o]..[o+len]);
+        s1.sub_scalar_(o);
+        let s2 = sparse_subtensor_reindexed(&i,&[300], [o]..[o+len]);
+        assert_eq!(s1,s2);
+        for i in s1{
+            assert_le!(0,i);
+        }
+    }
+    #[test]
+    fn test10() {
+        let c:u32 = 1000;
+        let r = 20;
+        let ii:Vec<Vec<u32>> = (0..r).map(|_|rand_set_sorted(c/10,0..c)).collect();
+        let b:Vec<bool> = ii.iter().map(|i|sparse_to_dense(&i,c as usize)).flatten().collect();
+        let (i1,o1) = batch_dense_to_sparse::<u32>(c as usize,&b);
+        let (i2,o2) = join_sets(&ii);
+        assert_eq!(i1,i2,"indices");
+        assert_eq!(o1,o2,"offsets");
     }
 }

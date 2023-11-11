@@ -19,9 +19,9 @@ crate-type = ["cdylib"]
 vf = {path= "../vf" }
 numpy = "0.13"
 chrono = "0.4.19"
-serde = "1.0.130"
+serde = "1.0.166"
 rand = "0.8.4"
-ciborium = "0.2.0"
+ciborium = "0.2.1"
 rand_distr = "0.4.3"
 
 [dependencies.pyo3]

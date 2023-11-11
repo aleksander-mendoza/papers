@@ -19,7 +19,7 @@ use vf::{arr2, arr3, slice_as_arr, tup2, tup3, tup4, tup6};
 use vf::ecc_layer::Layer;
 use vf::init::InitEmptyWithCapacity;
 use vf::top_k::argsort;
-use crate::util::{arrX, py_any_as_numpy};
+use crate::util::{arrX, pickle, py_any_as_numpy, unpickle};
 
 
 #[pyfunction]
@@ -121,6 +121,7 @@ pub fn conv_stride(input_size: PyObject, output_size: PyObject, kernel: PyObject
 
 #[pyfunction]
 #[text_signature = "(strides,kernels)"]
+///strides:[(int,int,int?)],kernels:[(int,int,int?)]  -> stride:(int,int,int), kernel:(int,int,int)
 pub fn conv_compose_array(strides: Vec<PyObject>, kernels: Vec<PyObject>) -> PyResult<(Vec<u32>, Vec<u32>)> {
     assert_eq!(strides.len(), kernels.len());
     let (mut kernel, mut stride) = ([1; 3], [1; 3]);
@@ -307,6 +308,25 @@ impl ConvShape {
         let rhs = unsafe { conv_tensor.as_slice_mut() }.expect("Convolutional weights tensor is not continuous");
         self.cs.normalize_kernel_columns(rhs, vf::l(norm));
     }
+
+    #[text_signature = "(indices, output_pos)"]
+    /// indices:[int], output_pos:(int,int)
+    pub fn sparse_kernel_column_input_subset<'py>(&'py self, indices: &'py PyArray1<Idx>, output_pos:(Idx,Idx)) -> PyResult<&'py PyArray1<Idx>> {
+        let output_pos = [output_pos.0,output_pos.1];
+        let i = unsafe { indices.as_slice()? };
+        let x = self.cs.sparse_kernel_column_input_subset(i,&output_pos);
+        let o = PyArray1::from_vec(indices.py(), x);
+        Ok(o)
+    }
+    #[text_signature = "(indices, output_pos)"]
+    /// indices:[int], output_pos:(int,int)
+    pub fn sparse_kernel_column_input_subset_reindexed<'py>(&'py self, indices: &'py PyArray1<Idx>, output_pos:(Idx,Idx)) -> PyResult<&'py PyArray1<Idx>> {
+        let output_pos = [output_pos.0,output_pos.1];
+        let i = unsafe { indices.as_slice()? };
+        let x = self.cs.sparse_kernel_column_input_subset_reindexed(i,&output_pos);
+        let o = PyArray1::from_vec(indices.py(), x);
+        Ok(o)
+    }
     #[text_signature = "(conv_tensor, norm)"]
     /// conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_channels]
     pub fn normalize_minicolumn(&self, conv_tensor: &PyArray4<f32>, norm: usize) {
@@ -374,6 +394,7 @@ impl ConvShape {
         let conv = unsafe { conv_tensor.as_slice_mut() }.expect("Convolutional weights tensor is not continuous");
         self.cs.sparse_mul_assign_repeated(conv, epsilon, inp, out)
     }
+
     #[text_signature = "(conv_tensor, epsilon, input, output, biased=False)"]
     /// conv_tensor is of shape [kernel_height, kernel_width, in_channels, out_height, out_width, out_channels]
     pub fn sparse_increment<'py>(&self, conv_tensor: &'py PyArray6<f32>, epsilon: f32, input: &'py PyArray1<Idx>, output: &'py PyArray1<Idx>, biased: bool) {
@@ -448,11 +469,15 @@ impl ConvShape {
     // }
     #[staticmethod]
     #[text_signature = "(input_shape, out_channels, kernel, stride)"]
+    /// (input_shape:(int,int,int), out_channels:int, kernel:(int,int), stride:(int,int))
+    /// where `input_shape==(height,width,channels)`
     pub fn new_in(input_shape: (Idx, Idx, Idx), out_channels: Idx, kernel: (Idx, Idx), stride: (Idx, Idx)) -> Self {
         Self { cs: vf::conv_shape::ConvShape::new_in(arr3(input_shape), out_channels, arr2(kernel), arr2(stride)) }
     }
     #[staticmethod]
     #[text_signature = "(in_channels, output_shape, kernel, stride)"]
+    /// (in_channels:int, out_channels:(int,int,int), kernel:(int,int), stride:(int,int))
+    /// where `out_channels==(height,width,channels)`
     pub fn new_out(in_channels: Idx, output_shape: (Idx, Idx, Idx), kernel: (Idx, Idx), stride: (Idx, Idx)) -> Self {
         Self { cs: vf::conv_shape::ConvShape::new_out(in_channels, arr3(output_shape), arr2(kernel), arr2(stride)) }
     }
@@ -503,14 +528,56 @@ pub fn version<'py>() -> u32 {
 /// true boolean values within each batch.
 /// The second vector contains offsets to the first one. It works just like [[int]] but is flattened.
 /// Batches are assumed to be laid out continuously in memory.
-pub fn batch_sparse(bools: &PyArrayDyn<bool>) -> PyResult<(PyObject, PyObject)> {
+pub fn batch_sparse<'py>(bools: &'py PyArrayDyn<bool>) -> PyResult<(&'py PyArray1<Idx>, &'py PyArray1<usize>)> {
     assert!(bools.ndim() > 1, "Tensor must have at least 2 dimensions!");
     let b = unsafe { bools.as_slice()? };
     let batch_size = bools.shape()[1..].product();
     let (indices, offsets) = vf::batch_dense_to_sparse::<u32>(batch_size, b);
     let i = PyArray1::<u32>::from_vec(bools.py(), indices);
     let o = PyArray1::<usize>::from_vec(bools.py(), offsets);
-    Ok((i.to_object(bools.py()), o.to_object(bools.py())))
+    Ok((i, o))
+}
+
+#[pyfunction]
+#[text_signature = "(bools)"]
+/// Returns a pair of vectors (indices, offsets). First vector contains indices of all
+/// true boolean values within each batch.
+/// The second vector contains offsets to the first one. It works just like `[[int]]` but is flattened.
+/// Batches are assumed to be laid out continuously in memory.
+pub fn join_sparse<'py>(py:Python<'py>, bools: Vec<&'py PyArray1<Idx>>) -> PyResult<(&'py PyArray1<Idx>, &'py PyArray1<usize>)> {
+    let slices:Result<Vec<&[Idx]>,_> = bools.iter().map(|v|unsafe { v.as_slice() }).collect();
+    let slices = slices?;
+    let (indices,offsets) = vf::join_sets(&slices);
+    let i = PyArray1::<u32>::from_vec(py, indices);
+    let o = PyArray1::<usize>::from_vec(py, offsets);
+    Ok((i, o))
+}
+
+
+#[pyfunction]
+#[text_signature = "(indices, tensor_shape, from_pos, to_pos)"]
+/// indices:[int], tensor_shape:(int,int,int), from_pos:(int,int,int), to_pos:(int,int,int)
+pub fn sparse_subtensor<'py>(py:Python<'py>, indices: &'py PyArray1<Idx>, tensor_shape:(Idx,Idx,Idx), from_pos:(Idx,Idx,Idx), to_pos:(Idx,Idx,Idx)) -> PyResult<&'py PyArray1<Idx>> {
+    let from_pos = [from_pos.0,from_pos.1,from_pos.2];
+    let to_pos = [to_pos.0,to_pos.1,to_pos.2];
+    let tensor_shape = [tensor_shape.0,tensor_shape.1,tensor_shape.2];
+    let i = unsafe { indices.as_slice()? };
+    let x = vf::sparse_subtensor(i,&tensor_shape,from_pos..to_pos);
+    let o = PyArray1::from_vec(py, x);
+    Ok(o)
+}
+
+#[pyfunction]
+#[text_signature = "(indices, tensor_shape, from_pos, to_pos)"]
+/// indices:[int], tensor_shape:(int,int,int), from_pos:(int,int,int), to_pos:(int,int,int)
+pub fn sparse_subtensor_reindexed<'py>(py:Python<'py>, indices: &'py PyArray1<Idx>, tensor_shape:(Idx,Idx,Idx), from_pos:(Idx,Idx,Idx), to_pos:(Idx,Idx,Idx)) -> PyResult<&'py PyArray1<Idx>> {
+    let from_pos = [from_pos.0,from_pos.1,from_pos.2];
+    let to_pos = [to_pos.0,to_pos.1,to_pos.2];
+    let tensor_shape = [tensor_shape.0,tensor_shape.1,tensor_shape.2];
+    let i = unsafe { indices.as_slice()? };
+    let x = vf::sparse_subtensor_reindexed(i,&tensor_shape,from_pos..to_pos);
+    let o = PyArray1::from_vec(py, x);
+    Ok(o)
 }
 
 #[pyfunction]
@@ -580,6 +647,14 @@ pub fn sample_of_cardinality(values: &PyArrayDyn<f32>, cardinality: usize, std_d
 /// Returns a vector containing indices of all true boolean values
 pub fn rand_sparse_k(py: Python, cardinality: usize, from_inclusive: usize, to_exclusive: usize) -> PyObject {
     let mut v = vf::rand_set(cardinality, from_inclusive..to_exclusive);
+    PyArray1::from_vec(py, v).to_object(py)
+}
+
+#[pyfunction]
+#[text_signature = "(cardinality, from_inclusive, to_exclusive)"]
+/// Returns a vector containing indices of all true boolean values
+pub fn rand_sparse_k_sorted(py: Python, cardinality: usize, from_inclusive: usize, to_exclusive: usize) -> PyObject {
+    let mut v = vf::rand_set_sorted(cardinality, from_inclusive..to_exclusive);
     PyArray1::from_vec(py, v).to_object(py)
 }
 
@@ -1147,6 +1222,24 @@ impl HwtaL2Layer {
         let xi = unsafe { x.as_slice() }?;
         Ok(PyArray1::from_vec(x.py(), self.l.run_into_vec(xi)))
     }
+    #[text_signature = "(indices, offsets)"]
+    fn batch_run<'py>(&'py self, py:Python<'py>, indices: &'py PyArray1<Idx>, offsets: &'py PyArray1<usize>) -> PyResult<(&'py PyArray1<Idx>,&'py PyArray1<usize>)> {
+        let i = unsafe { indices.as_slice() }?;
+        let o = unsafe { offsets.as_slice() }?;
+        let (indices,offsets) = vf::join_sets(&self.l.batch_run_into_vec(i,o));
+        let i = PyArray1::<u32>::from_vec(py, indices);
+        let o = PyArray1::<usize>::from_vec(py, offsets);
+        Ok((i,o))
+    }
+    #[text_signature = "(indices, offsets)"]
+    fn batch_run_conv<'py>(&'py self, py:Python<'py>, indices: &'py PyArray1<Idx>, offsets: &'py PyArray1<usize>) -> PyResult<(&'py PyArray1<Idx>,&'py PyArray1<usize>)> {
+        let i = unsafe { indices.as_slice() }?;
+        let o = unsafe { offsets.as_slice() }?;
+        let (indices,offsets) = vf::join_sets(&self.l.batch_run_conv_into_vec(i,o));
+        let i = PyArray1::<u32>::from_vec(py, indices);
+        let o = PyArray1::<usize>::from_vec(py, offsets);
+        Ok((i,o))
+    }
     ///x is a sparse representation of binary vector of shape `[n]`, y is a sparse repr. of bin. vec. of shape `[m]`
     #[text_signature = "(x, s, y)"]
     fn learn(&mut self, x: &PyArray1<Idx>, s: &PyArray1<f32>, y: &PyArray1<Idx>) -> PyResult<()> {
@@ -1168,6 +1261,23 @@ impl HwtaL2Layer {
         let yi = unsafe { y.as_slice() }?;
         let si = unsafe { s.as_slice() }?;
         Ok(self.l.learn_conv(xi, si, yi))
+    }
+    #[getter]
+    fn weights<'py>(&self, py: Python<'py>) -> &'py PyArray1<f32> {
+        PyArray1::from_slice(py,self.l.W())
+    }
+    #[getter]
+    fn r<'py>(&self, py: Python<'py>) -> &'py PyArray1<f32> {
+        PyArray1::from_slice(py,self.l.r())
+    }
+    #[text_signature = "(path)"]
+    fn save(&self, path:String) -> PyResult<()> {
+        pickle(&self.l,path)
+    }
+    #[staticmethod]
+    #[text_signature = "(path)"]
+    fn load(path:String) -> PyResult<Self> {
+        unpickle(path).map(|l|Self{l})
     }
 }
 
@@ -1207,12 +1317,20 @@ impl SwtaLayer {
         self.l.cos_sim = cos_sim
     }
     #[getter]
-    fn is_conditional(&self) -> bool {
+    fn get_conditional(&self) -> bool {
         self.l.conditional
     }
     #[setter]
     fn set_conditional(&mut self, conditional:bool){
         self.l.conditional = conditional
+    }
+    #[getter]
+    fn W<'py>(&self, py: Python<'py>) -> &'py PyArray1<f32> {
+        PyArray1::from_slice(py,self.l.W())
+    }
+    #[getter]
+    fn U<'py>(&self, py: Python<'py>) -> &'py PyArray1<f32> {
+        PyArray1::from_slice(py,self.l.U())
     }
     #[getter]
     fn n(&self) -> Idx {
@@ -1222,6 +1340,7 @@ impl SwtaLayer {
     fn m(&self) -> Idx {
         self.l.m()
     }
+
     ///x is a sparse representation of binary vector of shape `[n]`, output is a sparse repr. of bin. vec. of shape `[m]`
     #[text_signature = "(x)"]
     fn run<'py>(&'py self, x: &'py PyArray1<Idx>) -> PyResult<&'py PyArray1<Idx>> {
@@ -1249,6 +1368,15 @@ impl SwtaLayer {
         let yi = unsafe { y.as_slice() }?;
         let si = unsafe { s.as_slice() }?;
         Ok(self.l.learn_conv(xi, si, yi))
+    }
+    #[text_signature = "(path)"]
+    fn save(&self, path:String) -> PyResult<()> {
+        pickle(&self.l,path)
+    }
+    #[staticmethod]
+    #[text_signature = "(path)"]
+    fn load(path:String) -> PyResult<Self> {
+        unpickle(path).map(|l|Self{l})
     }
 }
 
@@ -1279,6 +1407,8 @@ fn ecc_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(swta_v, m)?)?;
     m.add_function(wrap_pyfunction!(swta_u_, m)?)?;
     m.add_function(wrap_pyfunction!(swta_v_, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_subtensor_reindexed, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse_subtensor, m)?)?;
     m.add_function(wrap_pyfunction!(ordered_swta_u, m)?)?;
     m.add_function(wrap_pyfunction!(ordered_swta_v, m)?)?;
     m.add_function(wrap_pyfunction!(ordered_swta_u_, m)?)?;
@@ -1289,7 +1419,9 @@ fn ecc_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(swta_v_repeated_conv_, m)?)?;
     m.add_function(wrap_pyfunction!(sparse, m)?)?;
     m.add_function(wrap_pyfunction!(batch_sparse, m)?)?;
+    m.add_function(wrap_pyfunction!(join_sparse, m)?)?;
     m.add_function(wrap_pyfunction!(rand_sparse_k, m)?)?;
+    m.add_function(wrap_pyfunction!(rand_sparse_k_sorted, m)?)?;
     m.add_function(wrap_pyfunction!(rand_dense_k, m)?)?;
     m.add_function(wrap_pyfunction!(sparse_gt, m)?)?;
     m.add_function(wrap_pyfunction!(sparse_top_k, m)?)?;

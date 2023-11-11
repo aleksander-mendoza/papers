@@ -1,32 +1,28 @@
 import math
 import re
+from builtins import input
+
 import ecc_py
 import os
-import pandas as pd
-import copy
 from matplotlib import pyplot as plt
 import torch
 import numpy as np
 import json
 from tqdm import tqdm
-import pickle
 from torch.utils.data import DataLoader
 import torchvision
-import convergence_tests.single_layer as l
 
 fig, axs = None, None
 
-MNIST = torchvision.datasets.MNIST('../../data/', train=False, download=True)
-L2 = True
-METRIC_STR = "l2" if L2 else "l1"
 SAMPLES = 60000
-DIR = 'predictive_coding_stacked8/' + METRIC_STR + "/" + str(SAMPLES)
-
-ENTROPY_MAXIMISATION = True
-MACHINE_TYPE = ecc.CpuEccMachineL2 if L2 else ecc.CpuEccMachine
-DENSE_TYPE = ecc.CpuEccDenseL2 if L2 else ecc.CpuEccDense
+DIR = 'predictive_coding_stacked8/'
 SPLITS = [20, 100, 1000, 0.1]
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
+def closest_divisors(n):
+    a = round(math.sqrt(n))
+    while n%a > 0: a -= 1
+    return a,n//a
 
 def visualise_connection_heatmap(in_w, in_h, ecc_net, out_w, out_h, pause=None):
     global fig, axs
@@ -75,44 +71,56 @@ def compute_confusion_matrix_fit(conf_mat, ecc_net, metric_l2=True):
     return fit
 
 
-def preprocess_mnist():
-    enc = htm.EncoderBuilder()
-    img_w, img_h, img_c = 28, 28, 1
-    enc_img = enc.add_image(img_w, img_h, img_c, 0.8)
-    sdr_mnist = [htm.CpuSDR() for _ in MNIST]
-    for sdr, img in zip(sdr_mnist, MNIST):
-        enc_img.encode(sdr, img.unsqueeze(2).numpy())
-    sdr_dataset = htm.CpuSdrDataset([28, 28, 1], sdr_mnist)
-    return sdr_dataset
-
-
 class MachineShape:
 
-    def __init__(self, channels, kernels, strides, drifts, k):
+    def __init__(self, layer_type,
+                 input_size: (int, int),
+                 channels: [int],
+                 kernels: [(int, int)],
+                 strides: [(int, int)],
+                 drifts: [int]):
         assert len(channels) == len(kernels) + 1
-        assert len(kernels) == len(strides) == len(drifts) == len(k)
+        assert len(kernels) == len(strides) == len(drifts)
+        self.layer_type = layer_type
+        if self.layer_type == ecc_py.HwtaL2Layer:
+            self.layer_code = 'h2'
+        elif self.layer_type == ecc_py.SwtaLayer:
+            self.layer_code = 's'
+        else:
+            raise ValueError("Invalid layer type " + str(layer_type))
+
         self.channels = channels
-        self.k = k
         self.kernels = kernels
         self.strides = strides
         self.drifts = drifts
+        self.h, self.w = input_size
+        input_size = self.input_shape = (self.h, self.w, self.channels[0])
+        self.shapes:[ecc_py.ConvShape] = []
+        for k, co, s in zip(self.kernels, self.channels[1:], self.strides):
+            sh = ecc_py.ConvShape.new_in(input_size, out_channels=co, kernel=(k, k), stride=(s, s))
+            self.shapes.append(sh)
+            input_size = sh.out_shape
+        self.output_shape = input_size
 
-    def composed_conv(self, idx):
-        strides = [[s, s] for s in self.strides]
-        kernels = [[k, k] for k in self.kernels]
-        return htm.conv_compose_array(strides=strides[:idx + 1], kernels=kernels[:idx + 1])
+    def composed_conv(self, idx)->ecc_py.ConvShape:
+        strides = [[s, s] for s in self.strides[:idx+1]]
+        kernels = [[k, k] for k in self.kernels[:idx+1]]
+        stride, kernel = ecc_py.conv_compose_array(strides=strides, kernels=kernels)
+        c = self.channels[idx+1]
+        return ecc_py.ConvShape.new_in(self.input_shape, out_channels=c, kernel=kernel[:2], stride=stride[:2])
 
     def code_name_part(self, idx):
         k = "k" + str(self.kernels[idx])
         s = "s" + str(self.strides[idx])
         c = "c" + str(self.channels[idx])
         d = "d" + str(self.drifts[idx])
-        k_ = "k" + str(self.k[idx]) if self.k[idx] > 1 else ""
-        return k + s + c + k_ + d
+        return k + s + c + d
 
     def code_name(self, idx):
+        if idx <= 0:
+            return 'mnist'
         path = ''.join([self.code_name_part(i) + "_" for i in range(idx)])
-        return path + "c" + str(self.channels[idx])
+        return self.layer_code + '_' + path + "c" + str(self.channels[idx])
 
     def parent_code_name(self):
         if len(self) == 0:
@@ -120,8 +128,8 @@ class MachineShape:
         else:
             return self.code_name(len(self) - 1)
 
-    def save_file(self, idx):
-        return DIR + "/" + self.code_name(idx)
+    def save_file(self, idx, dest_dir="results"):
+        return os.path.join(dest_dir, self.code_name(idx))
 
     def kernel(self, idx):
         return [self.kernels[idx], self.kernels[idx]]
@@ -135,15 +143,15 @@ class MachineShape:
     def __len__(self):
         return len(self.kernels)
 
-    def load_layer(self, idx):
-        mf = self.save_file(idx + 1) + ".model"
+    def load_layer(self, idx, dest_dir="results"):
+        mf = self.save_file(idx + 1, dest_dir=dest_dir) + ".model"
         if os.path.exists(mf):
-            return DENSE_TYPE.load(mf)
+            return self.layer_type.load(mf)
         else:
             return None
 
-    def load_or_save_params(self, idx, **kwrds):
-        f = self.save_file(idx + 1) + " params.txt"
+    def load_or_save_params(self, idx, dest_dir="results", **kwrds):
+        f = self.save_file(idx + 1, dest_dir=dest_dir) + " params.txt"
         if os.path.exists(f):
             with open(f, "r") as f:
                 d2 = json.load(f)
@@ -154,88 +162,78 @@ class MachineShape:
         return kwrds
 
 
-class Mnist:
+class Dataset:
 
     def __init__(self, machine_shape: MachineShape, layer_idx):
         self.machine_shape = machine_shape
         self.layer_idx = layer_idx
-        self.file = machine_shape.save_file(layer_idx) + " data.pickle"
-        self.mnist = None
+        self.file = machine_shape.save_file(layer_idx) + " data.npz"
         self.composed_stride, self.composed_kernel = machine_shape.composed_conv(layer_idx)
+        load_file = machine_shape.save_file(layer_idx - 1) + " data.npz"
+        if not os.path.exists(load_file) and layer_idx == 0:
+            mnist = torchvision.datasets.MNIST('../../data/', train=False, download=True)
+            self.indices, self.offsets = ecc_py.batch_sparse(mnist)
+            np.save(load_file, (self.indices, self.offsets))
+        else:
+            self.indices, self.offsets = np.load(load_file)
 
-    def load(self):
-        self.mnist = htm.CpuSdrDataset.load(self.file)
+    def __getitem__(self, index):
+        return self.indices[self.offsets[index]:self.offsets[index+1]]
+
+    def __len__(self):
+        return len(self.offsets)-1
 
     def save_mnist(self):
-        self.mnist.save(self.file)
+        np.save(self.file, (self.indices, self.offsets))
 
 
-class SingleColumnMachine:
+class Net:
 
-    def __init__(self, machine_shape: MachineShape, w, h, threshold=None):
-        assert w * h == machine_shape.channels[-1]
-        self.threshold = threshold
+    def __init__(self, machine_shape: MachineShape):
         self.machine_shape = machine_shape
-        self.m = MACHINE_TYPE()
-        self.w = w
-        self.h = h
-        top = self.machine_shape.load_layer(len(machine_shape) - 1)
-        if top is None:
-            l = DENSE_TYPE([1, 1],
-                      kernel=self.machine_shape.kernel(-1),
-                      stride=self.machine_shape.stride(-1),
-                      in_channels=self.machine_shape.channels[-2],
-                      out_channels=self.machine_shape.channels[-1],
-                      k=self.machine_shape.k[-1])
-            prev_k = self.machine_shape.k[-2] if len(self.machine_shape.k) > 1 else 1
-            if self.threshold == 'in':
-                l.threshold = prev_k / l.in_channels
-            elif type(self.threshold) is float:
-                l.threshold = self.threshold
-            else:
-                l.threshold = prev_k / l.out_channels
-            self.m.push(l)
-        else:
-            self.m.push(top)
-        for idx in reversed(range(len(machine_shape) - 1)):
-            self.m.prepend_repeated_column(machine_shape.load_layer(idx))
+        self.layer: ecc_py.SwtaLayer = self.machine_shape.load_layer(len(machine_shape) - 1)
 
-    def train(self, plot=False, save=True, log=None,
-              snapshots_per_sample=1, iterations=2000000,
-              interval=100000, test_patches=20000):
+    def train(self, plot=False, save=True,
+              snapshots_per_sample=1,
+              iterations=2000000,
+              interval=100000,
+              test_patches=20000):
         idx = len(self.machine_shape) - 1
-        layer = self.m.get_layer(idx)
         drift = self.machine_shape.drift(idx)
         params = self.machine_shape.load_or_save_params(
             idx,
-            w=self.w,
-            h=self.h,
+            input_shape=self.machine_shape.input_shape,
             snapshots_per_sample=snapshots_per_sample,
             iterations=iterations,
             interval=interval,
             test_patches=test_patches,
         )
-        w = params['w']
-        h = params['h']
         snapshots_per_sample = params['snapshots_per_sample']
         iterations = params['iterations']
         interval = params['interval']
         test_patches = params['test_patches']
-        mnist = Mnist(self.machine_shape, idx)
-        mnist.load()
-        mnist.mnist = mnist.mnist.subdataset(0, SAMPLES)
-        compound_stride, compound_kernel = self.machine_shape.composed_conv(idx)
-        compound_stride, compound_kernel = compound_stride[:2], compound_kernel[:2]
-        test_patch_indices = mnist.mnist.gen_rand_conv_subregion_indices_with_ecc(layer, test_patches)
-        test_input_patches = mnist.mnist.conv_subregion_indices_with_ecc(layer, test_patch_indices)
-        test_img_patches = SDR_MNIST.mnist.subdataset(0, SAMPLES).conv_subregion_indices_with_ker(compound_kernel,
-                                                                                                  compound_stride,
-                                                                                                  test_patch_indices)
-        print("PATCH_SIZE=", test_img_patches.shape)
+        input_dataset = Dataset(self.machine_shape, idx)
+        mnist = Dataset(self.machine_shape, 0)
+        composed_shape = self.machine_shape.composed_conv(idx)
+        layer_shape = self.machine_shape.shapes[idx]
+        test_patch_output_positions = np.random.randint((0,0), composed_shape.out_grid, (test_patches,2))
+        test_input_patches = []
+        test_img_patches = []
+        for test_patch_output_position in test_patch_output_positions:
+            rand_img_idx = np.random.randint(0, len(mnist))
+            mnist_img = mnist[rand_img_idx]
+            input_img = input_dataset[rand_img_idx]
+            mnist_patch = composed_shape.sparse_kernel_column_input_subset_reindexed(mnist_img, tuple(test_patch_output_position))
+            input_patch = layer_shape.sparse_kernel_column_input_subset_reindexed(input_img, tuple(test_patch_output_position))
+            test_input_patches.append(input_patch)
+            test_img_patches.append(mnist_patch)
+
+        print("PATCH_SIZE=", composed_shape.kernel_column_shape)
         all_missed = []
         all_total_sum = []
         if plot:
-            fig, axs = plt.subplots(self.w, self.h)
+            w, h = closest_divisors(layer_shape.out_channels)
+            fig, axs = plt.subplots(w, h)
             for a in axs:
                 for b in a:
                     b.set_axis_off()
@@ -260,33 +258,23 @@ class SingleColumnMachine:
                     plt.savefig(img_file_name)
 
         for s in tqdm(range(int(math.ceil(iterations / interval))), desc="training"):
-            eval_ecc()
-            mnist.mnist.train_with_patches(number_of_samples=interval, drift=drift,
-                                           patches_per_sample=snapshots_per_sample,
-                                           ecc=layer, log=log,
-                                           decrement_activities=ENTROPY_MAXIMISATION)
+            # eval_ecc()
+            for _ in range(interval):
+                rand_idx = np.random.randint(0, len(input_dataset))
+                x = rand_idx[rand_idx]
+                out_positions = np.random.randint((0, 0), composed_shape.out_grid, (snapshots_per_sample, 2))
+                for out_pos in range(out_positions):
+                    input_patch = layer_shape.sparse_kernel_column_input_subset_reindexed(x, tuple(out_pos))
+                    y = self.layer.train(input_patch)
             if save:
-                layer.save(self.machine_shape.save_file(idx + 1) + ".model")
-        eval_ecc()
+                self.layer.save(self.machine_shape.save_file(idx + 1) + ".model")
+        # eval_ecc()
         with open(self.machine_shape.save_file(idx + 1) + ".log", "a+") as f:
             print("missed=", all_missed, file=f)
             print("sums=", all_total_sum, file=f)
         if plot:
             plt.close(fig)
             # plt.show()
-
-
-class FullColumnMachine:
-
-    def __init__(self, machine_shape: MachineShape):
-        self.machine_shape = machine_shape
-        self.m = MACHINE_TYPE()
-        bottom = machine_shape.load_layer(0)
-        out_size = htm.conv_out_size([28, 28], bottom.stride, bottom.kernel)[:2]
-        bottom = bottom.repeat_column(out_size)
-        self.m.push(bottom)
-        for idx in range(1, len(machine_shape)):
-            self.m.push_repeated_column(machine_shape.load_layer(idx))
 
     def eval_with_classifier_head(self, overwrite_data=False, overwrite_benchmarks=False, epochs=4):
         idx = len(self.machine_shape) - 1
@@ -405,45 +393,17 @@ class FullColumnMachine:
                     print(s)
 
 
-SDR_MNIST = Mnist(MachineShape([1], [], [], [], []), 0)
-if os.path.exists(SDR_MNIST.file):
-    SDR_MNIST.load()
-else:
-    SDR_MNIST.mnist = preprocess_mnist()
-    SDR_MNIST.save_mnist()
-
-
 def run_experiments():
-    factorizations = {
-        100: (10, 10),
-        200: (10, 20),
-        256: (16, 16),
-        144: (12, 12),
-        9: (3, 3),
-        6: (3, 2),
-        8: (4, 2),
-        24: (6, 4),
-        32: (8, 4),
-        16: (4, 4),
-        48: (8, 6),
-        49: (7, 7),
-        64: (8, 8),
-        1: (1, 1),
-        20: (5, 4),
-        25: (5, 5),
-        40: (8, 5),
-        400: (20, 20)
-    }
     i49 = (49, 6, 1, 1, 1, None, 1)
     e144 = (144, 5, 1, 1, 1, None, 1)
     e200 = (200, 5, 1, 1, 1, None, 1)
     e256 = (256, 5, 1, 1, 1, None, 1)
 
     def e(channels, kernel, k=1):
-        return channels, kernel, 1, 1, 1, None, k
+        return channels, kernel, 1, 1, 1, None
 
     def c(channels, drift, k=1):
-        return channels, 1, 1, drift, 6, 'in', k
+        return channels, 1, 1, drift, 6, 'in'
 
     experiments = [
         # (1, [e(49, 6), c(9, 3), e(100, 6), c(9, 5), e(144, 6), c(16, 7), e(256, 6), c(20, 8), e(256, 6)]),
@@ -461,7 +421,7 @@ def run_experiments():
         # (1, [e(8, 6), e(2 * 8, 3), e(3 * 8, 3), e(4 * 8, 3), e(4 * 8, 3), e(4 * 8, 3)]),
         # (1, [e(16, 6), e(2 * 16, 3), e(3 * 16, 3), e(4 * 16, 3), e(4 * 16, 3), e(4 * 16, 3)]),
         # (1, [e(16, 6), e(2 * 16, 6), e(3 * 16, 6), e(4 * 16, 6), e(4 * 16, 6)]),
-        (1, [e(49, 6), e(100, 6), e(144, 6), e(256, 6), e(256, 6)]),
+        (ecc_py.HwtaL2Layer, 1, [e(49, 6), e(100, 6), e(144, 6), e(256, 6), e(256, 6)]),
         # (1, [i49, c9(3), e144, c9(5), e144, c9(7), e144, c9(10), e144, c9(7)]),
         # (1, [i49, c9(3), e144, c9(5), e144, c16(7), e144, c16(10), e144, c16(7), e144, c16(3)]),
         # (1, [i49, c9(3), e144, c9(5), e144, c16(7), e200, c16(10), e200, c20(7), e200, c20(3)]),
@@ -470,24 +430,26 @@ def run_experiments():
     overwrite_benchmarks = False
     overwrite_data = False
     for experiment in experiments:
-        first_channels, layers = experiment
-        kernels, strides, channels, drifts, ks = [], [], [first_channels], [], []
+        layer_type, first_channels, layers = experiment
+        kernels, strides, channels, drifts = [], [], [first_channels], []
         for layer in layers:
-            channel, kernel, stride, drift, snapshots_per_sample, threshold, k = layer
+            channel, kernel, stride, drift, snapshots_per_sample, threshold = layer
             kernels.append(kernel)
             strides.append(stride)
             channels.append(channel)
             drifts.append(drift)
-            ks.append(k)
-            s = MachineShape(channels, kernels, strides, drifts, ks)
+            s = MachineShape(layer_type=layer_type,
+                             input_size=[28, 28],
+                             channels=channels,
+                             kernels=kernels,
+                             strides=strides,
+                             drifts=drifts)
             code_name = s.save_file(len(kernels))
-            save_file = code_name + " data.pickle"
+            save_file = code_name + " data.npz"
             if overwrite_benchmarks or overwrite_data or not os.path.exists(save_file):
-                w, h = factorizations[channel]
-                m = SingleColumnMachine(s, w, h, threshold=threshold)
+                m = Net(s)
                 print(save_file)
                 m.train(save=True, plot=True, snapshots_per_sample=snapshots_per_sample)
-                m = FullColumnMachine(s)
                 print(save_file)
                 m.eval_with_naive_bayes(overwrite_data=overwrite_data,
                                         overwrite_benchmarks=overwrite_benchmarks)
@@ -675,9 +637,9 @@ def print_comparison_across_sample_sizes():
         d = 'predictive_coding_stacked8/' + str(s)
         suff = " accuracy2.txt"
         for f in files:
-            splits = [20,100,1000,0.1, 0.9]
+            splits = [20, 100, 1000, 0.1, 0.9]
             b = parse_benchmarks(d + '/' + f + suff, splits=splits)
-            b = " ".join(["{:.0%}/{:.0%}".format(e,t) for e,t in zip(b[:len(splits)], b[len(splits):])])
+            b = " ".join(["{:.0%}/{:.0%}".format(e, t) for e, t in zip(b[:len(splits)], b[len(splits):])])
             results[f][s] = b
     results = [(k, v) for k, v in results.items()]
     results.sort(key=lambda a: a[0])

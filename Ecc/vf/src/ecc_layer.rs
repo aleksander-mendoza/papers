@@ -1,9 +1,13 @@
 use std::fmt::{Debug, Formatter};
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
 use std::iter::Step;
+use std::path::Path;
 use itertools::Itertools;
 use more_asserts::debug_assert_lt;
 use nalgebra::{DMatrix, DVector, Matrix};
-use num_traits::{AsPrimitive, PrimInt};
+use num_traits::{AsPrimitive, NumAssign, PrimInt};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use crate::{ArrayCast, l, normalize_mat_column, normalize_mat_columns, VectorFieldAddAssign, VectorFieldOne};
 use crate::conv_shape::ConvShape;
 use crate::dot_sparse_slice::{dot1, dot1_};
@@ -11,8 +15,10 @@ use crate::from_usize::FromUsize;
 use crate::init::{InitEmptyWithCapacity, InitFilledCapacity};
 use crate::init_rand::InitRandWithCapacity;
 use crate::soft_wta::NULL;
+use serde::{Serialize, Deserialize};
 
-pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize>> {
+
+pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize> + NumAssign + Send+Sync>: Send+Sync{
     fn shape(&self) -> &ConvShape<Idx>;
     /**Size of input when running in non-convolutional mode (`run` and `learn`)*/
     fn n(&self) -> Idx {
@@ -45,6 +51,12 @@ pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize>> {
     fn run_into_vec(&self, x: &[Idx]) -> Vec<Idx> {
         self.run_into_vec_(x, self.new_s().as_mut_slice())
     }
+    fn batch_run_into_vec(&self, indices: &[Idx], offsets:&[usize]) -> Vec<Vec<Idx>>{
+        (0..offsets.len()-1).into_par_iter().map(|i|{
+            let x:&[Idx] = &indices[offsets[i]..offsets[i+1]];
+            self.run_into_vec(x)
+        }).collect()
+    }
     /**x is sparse representation of input tensor of shape `[kernel_height, kernel_width, in_channels]`,
          y is sparse representation of output tensor of shape `[out_channels]`*/
     fn learn(&mut self, x: &[Idx], s: &[f32], y: &[Idx]);
@@ -72,6 +84,12 @@ pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize>> {
     fn run_conv_into_vec(&self, x: &[Idx]) -> Vec<Idx> {
         self.run_conv_into_vec_(x, self.new_s_conv().as_mut_slice())
     }
+    fn batch_run_conv_into_vec(&self, indices: &[Idx], offsets:&[usize]) -> Vec<Vec<Idx>> {
+        (0..offsets.len()-1).into_par_iter().map(|i|{
+            let x:&[Idx] = &indices[offsets[i]..offsets[i+1]];
+            self.run_conv_into_vec(x)
+        }).collect()
+    }
     /**x is sparse representation of input tensor of shape `[in_height, in_width, in_channels]`,
                  y is sparse representation of output tensor of shape `[out_height, out_width, out_channels]`*/
     fn learn_conv(&mut self, x: &[Idx], s: &[f32], y: &[Idx]);
@@ -83,10 +101,11 @@ pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize>> {
     fn train_conv(&mut self, x: &[Idx]) -> Vec<Idx> {
         self.train_conv_(x, self.new_s_conv().as_mut_slice())
     }
+
 }
 
-#[derive(Clone, PartialEq)]
-pub struct HwtaL2Layer<Idx: Debug + PrimInt> {
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct HwtaL2Layer<Idx: Debug + PrimInt + NumAssign + Send+Sync> {
     shape: ConvShape<Idx>,
     pub r_step: f32,
     /// of shape  `[kernel_height, kernel_width, in_channels, out_channels]`
@@ -98,13 +117,13 @@ pub struct HwtaL2Layer<Idx: Debug + PrimInt> {
     pub min_input_cardinality: u32,
 }
 
-impl<Idx: Debug + PrimInt> Debug for HwtaL2Layer<Idx> {
+impl<Idx: Debug + PrimInt + NumAssign+ Send+Sync> Debug for HwtaL2Layer<Idx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Hwta({:?})", self.shape)
     }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize>> HwtaL2Layer<Idx> {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + NumAssign+ Send+Sync> HwtaL2Layer<Idx> {
     pub fn new(shape: ConvShape<Idx>, norm: usize) -> Self {
         let mut W = Vec::rand(shape.minicolumn_w_shape().product().as_());
         let r = Vec::full(shape.out_channels().as_(), 0f32);
@@ -120,9 +139,15 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize>> HwtaL2Layer<Idx> {
             min_input_cardinality: 1,
         }
     }
+    pub fn W(&self)->&[f32]{
+        &self.W
+    }
+    pub fn r(&self)->&[f32]{
+        &self.r
+    }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> Layer<Idx> for HwtaL2Layer<Idx> {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize + NumAssign + Send+Sync> Layer<Idx> for HwtaL2Layer<Idx> {
     fn shape(&self) -> &ConvShape<Idx> {
         &self.shape
     }
@@ -182,8 +207,8 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> Layer<Idx> fo
     }
 }
 
-#[derive(Clone, PartialEq)]
-pub struct SwtaLayer<Idx: Debug + PrimInt> {
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct SwtaLayer<Idx: Debug + PrimInt + NumAssign+ Send+Sync> {
     shape: ConvShape<Idx>,
     pub cos_sim: bool,
     pub conditional: bool,
@@ -198,13 +223,13 @@ pub struct SwtaLayer<Idx: Debug + PrimInt> {
     norm: usize,
 }
 
-impl<Idx: Debug + PrimInt> Debug for SwtaLayer<Idx> {
+impl<Idx: Debug + PrimInt + NumAssign+ Send+Sync> Debug for SwtaLayer<Idx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Swta({:?})", self.shape)
     }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize>> SwtaLayer<Idx> {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + NumAssign+ Send+Sync> SwtaLayer<Idx> {
     pub fn new(shape: ConvShape<Idx>, norm: usize) -> Self {
         let mut W = Vec::rand(shape.minicolumn_w_shape().product().as_());
         let U = Vec::rand(shape.minicolumn_u_shape().product().as_());
@@ -223,9 +248,15 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize>> SwtaLayer<Idx> {
             norm,
         }
     }
+    pub fn W(&self)->&[f32]{
+        &self.W
+    }
+    pub fn U(&self)->&[f32]{
+        &self.U
+    }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> SwtaLayer<Idx> {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize + NumAssign+ Send+Sync> SwtaLayer<Idx> {
     fn _learn_<const COS_SIM: bool, const CONDITIONAL: bool, const USE_ABS: bool>(&mut self, x: &[Idx], s: &[f32], y: &[Idx]){
         let m = self.m().as_();
         let Self {
@@ -254,7 +285,7 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> SwtaLayer<Idx
     }
 }
 
-impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize> Layer<Idx> for SwtaLayer<Idx> {
+impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize + NumAssign + Send+Sync> Layer<Idx> for SwtaLayer<Idx> {
     fn shape(&self) -> &ConvShape<Idx> {
         &self.shape
     }
