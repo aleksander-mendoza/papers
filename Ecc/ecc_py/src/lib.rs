@@ -122,7 +122,7 @@ pub fn conv_stride(input_size: PyObject, output_size: PyObject, kernel: PyObject
 #[pyfunction]
 #[text_signature = "(strides,kernels)"]
 ///strides:[(int,int,int?)],kernels:[(int,int,int?)]  -> stride:(int,int,int), kernel:(int,int,int)
-pub fn conv_compose_array(strides: Vec<PyObject>, kernels: Vec<PyObject>) -> PyResult<(Vec<u32>, Vec<u32>)> {
+pub fn conv_compose_array(strides: Vec<PyObject>, kernels: Vec<PyObject>) -> PyResult<((u32,u32,u32), (u32,u32,u32))> {
     assert_eq!(strides.len(), kernels.len());
     let (mut kernel, mut stride) = ([1; 3], [1; 3]);
     let gil = Python::acquire_gil();
@@ -132,12 +132,12 @@ pub fn conv_compose_array(strides: Vec<PyObject>, kernels: Vec<PyObject>) -> PyR
         let k = arrX(py, &k, 1, 1, 1)?;
         (stride, kernel) = conv::compose(&stride, &kernel, &s, &k);
     }
-    Ok((stride.to_vec(), kernel.to_vec()))
+    Ok((vf::tup3(stride), vf::tup3(kernel)))
 }
 
 #[pyfunction]
 #[text_signature = "(stride1,kernel1,stride2,kernel2)"]
-pub fn conv_compose(stride1: PyObject, kernel1: PyObject, stride2: PyObject, kernel2: PyObject) -> PyResult<(Vec<u32>, Vec<u32>)> {
+pub fn conv_compose(stride1: PyObject, kernel1: PyObject, stride2: PyObject, kernel2: PyObject) -> PyResult<((u32,u32,u32), (u32,u32,u32))> {
     let gil = Python::acquire_gil();
     let py = gil.python();
     let stride1 = arrX(py, &stride1, 1, 1, 1)?;
@@ -145,7 +145,7 @@ pub fn conv_compose(stride1: PyObject, kernel1: PyObject, stride2: PyObject, ker
     let stride2 = arrX(py, &stride2, 1, 1, 1)?;
     let kernel2 = arrX(py, &kernel2, 1, 1, 1)?;
     let (stride, kernel) = conv::compose(&stride1, &kernel1, &stride2, &kernel2);
-    Ok((stride.to_vec(), kernel.to_vec()))
+    Ok((vf::tup3(stride), vf::tup3(kernel)))
 }
 
 #[pyfunction]
@@ -539,21 +539,30 @@ pub fn batch_sparse<'py>(bools: &'py PyArrayDyn<bool>) -> PyResult<(&'py PyArray
 }
 
 #[pyfunction]
-#[text_signature = "(bools)"]
+#[text_signature = "(sparse)"]
 /// Returns a pair of vectors (indices, offsets). First vector contains indices of all
 /// true boolean values within each batch.
 /// The second vector contains offsets to the first one. It works just like `[[int]]` but is flattened.
 /// Batches are assumed to be laid out continuously in memory.
-pub fn join_sparse<'py>(py:Python<'py>, bools: Vec<&'py PyArray1<Idx>>) -> PyResult<(&'py PyArray1<Idx>, &'py PyArray1<usize>)> {
-    let slices:Result<Vec<&[Idx]>,_> = bools.iter().map(|v|unsafe { v.as_slice() }).collect();
+pub fn join_sparse<'py>(py:Python<'py>, sparse: Vec<&'py PyArray1<Idx>>) -> PyResult<(&'py PyArray1<Idx>, &'py PyArray1<usize>)> {
+    let slices:Result<Vec<&[Idx]>,_> = sparse.iter().map(|v|unsafe { v.as_slice() }).collect();
     let slices = slices?;
     let (indices,offsets) = vf::join_sets(&slices);
     let i = PyArray1::<u32>::from_vec(py, indices);
     let o = PyArray1::<usize>::from_vec(py, offsets);
     Ok((i, o))
 }
-
-
+#[pyfunction]
+#[text_signature = "(output_size, output_indices, output_offsets, input_size, input_indices, input_offsets)"]
+pub fn receptive_field<'py>(output_size:usize, output_indices: &'py PyArray1<Idx>, output_offsets:&'py PyArray1<usize>,
+                            input_size:usize, input_indices: &'py PyArray1<Idx>, input_offsets:&'py PyArray1<usize>)->PyResult<&'py PyArray2<f32>> {
+    let oi = unsafe { output_indices.as_slice()? };
+    let oo = unsafe { output_offsets.as_slice()? };
+    let ii = unsafe { input_indices.as_slice()? };
+    let io = unsafe { input_offsets.as_slice()? };
+    let v = vf::ecc_layer::receptive_field(output_size,oi,oo,input_size,ii,io);
+    PyArray1::from_vec(output_indices.py(), v).reshape((output_size, input_size))
+}
 #[pyfunction]
 #[text_signature = "(indices, tensor_shape, from_pos, to_pos)"]
 /// indices:[int], tensor_shape:(int,int,int), from_pos:(int,int,int), to_pos:(int,int,int)
@@ -589,7 +598,7 @@ pub fn sparse(bools: &PyArrayDyn<bool>) -> PyResult<&PyArray1<u32>> {
 }
 
 #[pyfunction]
-#[text_signature = "(indices)"]
+#[text_signature = "(indices, length)"]
 /// Returns a vector containing indices of all true boolean values
 pub fn dense(indices: &PyArrayDyn<u32>, length: usize) -> PyResult<&PyArray1<bool>> {
     let b = unsafe { indices.as_slice()? };
@@ -1254,7 +1263,12 @@ impl HwtaL2Layer {
         let xi = unsafe { x.as_slice() }?;
         Ok(PyArray1::from_vec(x.py(), self.l.run_conv_into_vec(xi)))
     }
-
+    ///x is a sparse representation of binary matrix of shape `[kernel_height, kernel_width, in_channels]`, output is a sparse repr. of bin. mat. of shape `[out_channels]`
+    #[text_signature = "(x)"]
+    fn train<'py>(&'py mut self, x: &'py PyArray1<Idx>) -> PyResult<&'py PyArray1<Idx>> {
+        let xi = unsafe { x.as_slice() }?;
+        Ok(PyArray1::from_vec(x.py(), self.l.train(xi)))
+    }
     ///x is a sparse representation of binary matrix of shape `[in_height, in_width, in_channels]`, y is a sparse repr. of bin. mat. of shape `[out_height, out_width, out_channels]`
     fn learn_conv(&mut self, x: &PyArray1<Idx>, s: &PyArray1<f32>, y: &PyArray1<Idx>) -> PyResult<()> {
         let xi = unsafe { x.as_slice() }?;
@@ -1361,7 +1375,12 @@ impl SwtaLayer {
         let xi = unsafe { x.as_slice() }?;
         Ok(PyArray1::from_vec(x.py(), self.l.run_conv_into_vec(xi)))
     }
-
+    ///x is a sparse representation of binary matrix of shape `[kernel_height, kernel_width, in_channels]`, output is a sparse repr. of bin. mat. of shape `[out_channels]`
+    #[text_signature = "(x)"]
+    fn train<'py>(&'py mut self, x: &'py PyArray1<Idx>) -> PyResult<&'py PyArray1<Idx>> {
+        let xi = unsafe { x.as_slice() }?;
+        Ok(PyArray1::from_vec(x.py(), self.l.train(xi)))
+    }
     ///x is a sparse representation of binary matrix of shape `[in_height, in_width, in_channels]`, y is a sparse repr. of bin. mat. of shape `[out_height, out_width, out_channels]`
     fn learn_conv(&mut self, x: &PyArray1<Idx>, s: &PyArray1<f32>, y: &PyArray1<Idx>) -> PyResult<()> {
         let xi = unsafe { x.as_slice() }?;
@@ -1418,6 +1437,8 @@ fn ecc_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(swta_u_repeated_conv_, m)?)?;
     m.add_function(wrap_pyfunction!(swta_v_repeated_conv_, m)?)?;
     m.add_function(wrap_pyfunction!(sparse, m)?)?;
+    m.add_function(wrap_pyfunction!(dense, m)?)?;
+    m.add_function(wrap_pyfunction!(dense_, m)?)?;
     m.add_function(wrap_pyfunction!(batch_sparse, m)?)?;
     m.add_function(wrap_pyfunction!(join_sparse, m)?)?;
     m.add_function(wrap_pyfunction!(rand_sparse_k, m)?)?;
@@ -1436,6 +1457,7 @@ fn ecc_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(rle_to_mat, m)?)?;
     m.add_function(wrap_pyfunction!(mat_to_rle, m)?)?;
     m.add_function(wrap_pyfunction!(conv_nearest, m)?)?;
+    m.add_function(wrap_pyfunction!(receptive_field, m)?)?;
     // m.add_function(wrap_pyfunction!(conv_variance, m)?)?;
     Ok(())
 }

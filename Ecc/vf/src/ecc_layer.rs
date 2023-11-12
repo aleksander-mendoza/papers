@@ -101,9 +101,26 @@ pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize> + NumAssig
     fn train_conv(&mut self, x: &[Idx]) -> Vec<Idx> {
         self.train_conv_(x, self.new_s_conv().as_mut_slice())
     }
-
 }
-
+/**Returns tensor of shape `[output_size,input_size]`*/
+pub fn receptive_field<Idx:AsPrimitive<usize>>(output_size:usize, output_indices: &[Idx], output_offsets:&[usize], input_size:usize, input_indices: &[Idx], input_offsets:&[usize])->Vec<f32>{
+    assert_eq!(output_offsets.len(), input_offsets.len());
+    let mut rf = vec![0f32;output_size*input_size];
+    for i in 0..output_offsets.len()-1{
+        let out = &output_indices[output_offsets[i]..output_offsets[i+1]];
+        let inp = &input_indices[input_offsets[i]..input_offsets[i+1]];
+        for out_channel in out{
+            let out_channel= out_channel.as_();
+            let rf_offset = out_channel*input_size;
+            for inp_idx in inp{
+                let inp_idx = inp_idx.as_();
+                debug_assert_lt!(inp_idx, input_size);
+                rf[rf_offset+inp_idx] += 1.;
+            }
+        }
+    }
+    rf
+}
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct HwtaL2Layer<Idx: Debug + PrimInt + NumAssign + Send+Sync> {
     shape: ConvShape<Idx>,

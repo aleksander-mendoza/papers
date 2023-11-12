@@ -24,7 +24,7 @@ def rand_patch():
     left_bottom = left_bottom.astype(int)
     top_right = left_bottom + PATCH_SIZE
     img = img[left_bottom[0]:top_right[0], left_bottom[1]:top_right[1]]
-    x = img / 255 > 0.8
+    x = img > int(255 * 0.8)
     x = x.reshape(-1)
     return x
 

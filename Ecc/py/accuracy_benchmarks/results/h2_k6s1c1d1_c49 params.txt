@@ -1,0 +1,1 @@
+{"input_shape": [28, 28, 1], "snapshots_per_sample": 1, "iterations": 2000000, "interval": 100000, "test_patches": 20000}

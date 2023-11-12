@@ -1,16 +1,14 @@
 import math
 import re
-from builtins import input
-
-import ecc_py
 import os
 from matplotlib import pyplot as plt
+import ecc_py
 import torch
+from torch.utils.data import DataLoader
+import torchvision
 import numpy as np
 import json
 from tqdm import tqdm
-from torch.utils.data import DataLoader
-import torchvision
 
 fig, axs = None, None
 
@@ -18,6 +16,7 @@ SAMPLES = 60000
 DIR = 'predictive_coding_stacked8/'
 SPLITS = [20, 100, 1000, 0.1]
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+
 
 def closest_divisors(n):
     a = round(math.sqrt(n))
@@ -128,8 +127,11 @@ class MachineShape:
         else:
             return self.code_name(len(self) - 1)
 
-    def save_file(self, idx, dest_dir="results"):
-        return os.path.join(dest_dir, self.code_name(idx))
+    def save_file(self, idx, dest_dir=None):
+        if dest_dir is None:
+            return os.path.join(SCRIPT_PATH, 'results', self.code_name(idx))
+        else:
+            return os.path.join(dest_dir, self.code_name(idx))
 
     def kernel(self, idx):
         return [self.kernels[idx], self.kernels[idx]]
@@ -143,14 +145,14 @@ class MachineShape:
     def __len__(self):
         return len(self.kernels)
 
-    def load_layer(self, idx, dest_dir="results"):
+    def load_layer(self, idx, dest_dir=None):
         mf = self.save_file(idx + 1, dest_dir=dest_dir) + ".model"
         if os.path.exists(mf):
             return self.layer_type.load(mf)
         else:
             return None
 
-    def load_or_save_params(self, idx, dest_dir="results", **kwrds):
+    def load_or_save_params(self, idx, dest_dir=None, **kwrds):
         f = self.save_file(idx + 1, dest_dir=dest_dir) + " params.txt"
         if os.path.exists(f):
             with open(f, "r") as f:
@@ -167,15 +169,15 @@ class Dataset:
     def __init__(self, machine_shape: MachineShape, layer_idx):
         self.machine_shape = machine_shape
         self.layer_idx = layer_idx
-        self.file = machine_shape.save_file(layer_idx) + " data.npz"
-        self.composed_stride, self.composed_kernel = machine_shape.composed_conv(layer_idx)
-        load_file = machine_shape.save_file(layer_idx - 1) + " data.npz"
+        self.file = machine_shape.save_file(layer_idx+1) + " data.npz"
+        load_file = machine_shape.save_file(layer_idx) + " data.npz"
         if not os.path.exists(load_file) and layer_idx == 0:
             mnist = torchvision.datasets.MNIST('../../data/', train=False, download=True)
-            self.indices, self.offsets = ecc_py.batch_sparse(mnist)
-            np.save(load_file, (self.indices, self.offsets))
+            self.indices, self.offsets = ecc_py.batch_sparse(mnist.data.numpy() > int(255 * 0.8))
+            np.savez(load_file, indices=self.indices, offsets=self.offsets)
         else:
-            self.indices, self.offsets = np.load(load_file)
+            npz = np.load(load_file)
+            self.indices, self.offsets = npz['indices'], npz['offsets']
 
     def __getitem__(self, index):
         return self.indices[self.offsets[index]:self.offsets[index+1]]
@@ -191,7 +193,11 @@ class Net:
 
     def __init__(self, machine_shape: MachineShape):
         self.machine_shape = machine_shape
-        self.layer: ecc_py.SwtaLayer = self.machine_shape.load_layer(len(machine_shape) - 1)
+        idx = len(machine_shape) - 1
+        self.layer: ecc_py.SwtaLayer = self.machine_shape.load_layer(idx)
+        if self.layer is None:
+            cs = self.machine_shape.shapes[idx]
+            self.layer = self.machine_shape.layer_type(cs, norm=2)
 
     def train(self, plot=False, save=True,
               snapshots_per_sample=1,
@@ -227,7 +233,11 @@ class Net:
             input_patch = layer_shape.sparse_kernel_column_input_subset_reindexed(input_img, tuple(test_patch_output_position))
             test_input_patches.append(input_patch)
             test_img_patches.append(mnist_patch)
-
+        test_input_indices, test_input_offsets = ecc_py.join_sparse(test_input_patches)
+        test_img_indices, test_img_offsets = ecc_py.join_sparse(test_img_patches)
+        test_img_size = composed_shape.kernel_column_volume
+        del test_input_patches
+        del test_img_patches
         print("PATCH_SIZE=", composed_shape.kernel_column_shape)
         all_missed = []
         all_total_sum = []
@@ -239,17 +249,17 @@ class Net:
                     b.set_axis_off()
 
         def eval_ecc():
-            test_outputs, s_sums, missed = test_input_patches.batch_infer_and_measure_s_expectation(layer)
-            receptive_fields = test_img_patches.measure_receptive_fields(test_outputs)
-            receptive_fields = receptive_fields.squeeze(2)
+            pred_indices, pred_offsets = self.layer.batch_run(test_input_indices, test_input_offsets)
+            out_c = layer_shape.out_channels
+            receptive_fields = ecc_py.receptive_field(out_c, pred_indices, pred_offsets, test_img_size, test_img_indices, test_img_offsets)
+            receptive_fields = receptive_fields.reshape(composed_shape.minicolumn_receptive_field_shape)
+            missed = sum(pred_offsets[1:] == pred_offsets[:-1])
             all_missed.append(missed / test_patches)
-            all_total_sum.append(s_sums)
             print("missed=", all_missed)
-            print("sums=", all_total_sum)
             if plot:
                 for i in range(w):
                     for j in range(h):
-                        axs[i, j].imshow(receptive_fields[:, :, i + j * w])
+                        axs[i, j].imshow(receptive_fields[i + j * w])
                 plt.pause(0.01)
                 if save:
                     img_file_name = self.machine_shape.save_file(idx + 1) + " before.png"
@@ -258,14 +268,14 @@ class Net:
                     plt.savefig(img_file_name)
 
         for s in tqdm(range(int(math.ceil(iterations / interval))), desc="training"):
-            # eval_ecc()
+            eval_ecc()
             for _ in range(interval):
                 rand_idx = np.random.randint(0, len(input_dataset))
-                x = rand_idx[rand_idx]
+                x = input_dataset[rand_idx]
                 out_positions = np.random.randint((0, 0), composed_shape.out_grid, (snapshots_per_sample, 2))
-                for out_pos in range(out_positions):
+                for out_pos in out_positions:
                     input_patch = layer_shape.sparse_kernel_column_input_subset_reindexed(x, tuple(out_pos))
-                    y = self.layer.train(input_patch)
+                    self.layer.train(input_patch)
             if save:
                 self.layer.save(self.machine_shape.save_file(idx + 1) + ".model")
         # eval_ecc()
