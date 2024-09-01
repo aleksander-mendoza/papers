@@ -3,11 +3,14 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::iter::Step;
 use std::path::Path;
+
 use itertools::Itertools;
 use more_asserts::debug_assert_lt;
 use nalgebra::{DMatrix, DVector, Matrix};
 use num_traits::{AsPrimitive, NumAssign, PrimInt};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use serde::{Deserialize, Serialize};
+
 use crate::{ArrayCast, l, normalize_mat_column, normalize_mat_columns, VectorFieldAddAssign, VectorFieldOne};
 use crate::conv_shape::ConvShape;
 use crate::dot_sparse_slice::{dot1, dot1_};
@@ -15,8 +18,6 @@ use crate::from_usize::FromUsize;
 use crate::init::{InitEmptyWithCapacity, InitFilledCapacity};
 use crate::init_rand::InitRandWithCapacity;
 use crate::soft_wta::NULL;
-use serde::{Serialize, Deserialize};
-
 
 pub trait Layer<Idx: Debug + PrimInt + FromUsize + AsPrimitive<usize> + NumAssign + Send+Sync>: Send+Sync{
     fn shape(&self) -> &ConvShape<Idx>;
@@ -193,7 +194,7 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize + NumAssign + 
             }
             let width = self.shape.kernel_column_volume().as_();
             let n = self.norm;
-            normalize_mat_column(width, k.as_(), &mut self.W, l(n));
+            normalize_mat_column(c, k.as_(), &mut self.W, l(n));
         }
     }
 
@@ -214,7 +215,7 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize + NumAssign + 
 
     fn learn_conv(&mut self, x: &[Idx], s: &[f32], y: &[Idx]) {
         let Self { shape, r_step, W, r, norm, w_step, .. } = self;
-        let n_columns = shape.kernel_column_volume().as_();
+        let n_columns = shape.out_channels().as_();
         let norm = norm.as_();
         shape.sparse_unbiased_increment_repeated(W, *w_step, x, y);
         shape.unique_fired_output_neurons(y, |k| {
@@ -365,6 +366,7 @@ impl<Idx: Debug + PrimInt + AsPrimitive<usize> + Step + FromUsize + NumAssign + 
 #[cfg(test)]
 mod tests {
     use crate::{dense_to_sparse, rand_set};
+
     use super::*;
 
     #[test]

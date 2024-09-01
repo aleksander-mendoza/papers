@@ -18,57 +18,6 @@ SPLITS = [20, 100, 1000, 0.1]
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
-def closest_divisors(n):
-    a = round(math.sqrt(n))
-    while n%a > 0: a -= 1
-    return a,n//a
-
-def visualise_connection_heatmap(in_w, in_h, ecc_net, out_w, out_h, pause=None):
-    global fig, axs
-    if fig is None:
-        fig, axs = plt.subplots(out_w, out_h)
-        for a in axs:
-            for b in a:
-                b.set_axis_off()
-    for i in range(out_w):
-        for j in range(out_h):
-            w = ecc_net.get_weights(i + j * out_w)
-            w = np.array(w)
-            w = w.reshape(in_w, in_h)
-            w.strides = (8, 56)
-            axs[i, j].imshow(w)
-    if pause is None:
-        plt.show()
-    else:
-        plt.pause(pause)
-
-
-def visualise_recursive_weights(w, h, ecc_net):
-    fig, axs = plt.subplots(w, h)
-    for a in axs:
-        for b in a:
-            b.set_axis_off()
-    for i in range(w):
-        for j in range(h):
-            weights = np.array(ecc_net.get_weights(i + j * w))
-            weights[i + j * w] = 0
-            weights = weights.reshape([w, h]).T
-            axs[i, j].imshow(weights)
-    plt.show()
-
-
-def compute_confusion_matrix_fit(conf_mat, ecc_net, metric_l2=True):
-    assert ecc_net.out_grid == [1, 1]
-    fit = torch.empty(ecc_net.out_channels)
-    for i in range(ecc_net.out_channels):
-        corr = conf_mat[i] / conf_mat[i].sum()
-        wei = torch.tensor(ecc_net.get_weights(i))
-        if metric_l2:
-            fit[i] = corr @ wei
-        else:  # l1
-            fit[i] = (corr - wei).abs().sum()
-    return fit
-
 
 class MachineShape:
 
@@ -164,19 +113,76 @@ class MachineShape:
         return kwrds
 
 
+
+def closest_divisors(n):
+    a = round(math.sqrt(n))
+    while n%a > 0: a -= 1
+    return a,n//a
+
+def visualise_connection_heatmap(in_w, in_h, ecc_net, out_w, out_h, pause=None):
+    global fig, axs
+    if fig is None:
+        fig, axs = plt.subplots(out_w, out_h)
+        for a in axs:
+            for b in a:
+                b.set_axis_off()
+    for i in range(out_w):
+        for j in range(out_h):
+            w = ecc_net.get_weights(i + j * out_w)
+            w = np.array(w)
+            w = w.reshape(in_w, in_h)
+            w.strides = (8, 56)
+            axs[i, j].imshow(w)
+    if pause is None:
+        plt.show()
+    else:
+        plt.pause(pause)
+
+
+def visualise_recursive_weights(w, h, ecc_net):
+    fig, axs = plt.subplots(w, h)
+    for a in axs:
+        for b in a:
+            b.set_axis_off()
+    for i in range(w):
+        for j in range(h):
+            weights = np.array(ecc_net.get_weights(i + j * w))
+            weights[i + j * w] = 0
+            weights = weights.reshape([w, h]).T
+            axs[i, j].imshow(weights)
+    plt.show()
+
+
+def compute_confusion_matrix_fit(conf_mat, ecc_net, metric_l2=True):
+    assert ecc_net.out_grid == [1, 1]
+    fit = torch.empty(ecc_net.out_channels)
+    for i in range(ecc_net.out_channels):
+        corr = conf_mat[i] / conf_mat[i].sum()
+        wei = torch.tensor(ecc_net.get_weights(i))
+        if metric_l2:
+            fit[i] = corr @ wei
+        else:  # l1
+            fit[i] = (corr - wei).abs().sum()
+    return fit
+
+
+
+
 class Dataset:
 
     def __init__(self, machine_shape: MachineShape, layer_idx):
         self.machine_shape = machine_shape
         self.layer_idx = layer_idx
-        self.file = machine_shape.save_file(layer_idx+1) + " data.npz"
-        load_file = machine_shape.save_file(layer_idx) + " data.npz"
-        if not os.path.exists(load_file) and layer_idx == 0:
+        self.file = machine_shape.save_file(layer_idx) + " data.npz"
+        self.indices, self.offsets = None, None
+
+    def load(self):
+        if not os.path.exists(self.file) and self.layer_idx == 0:
             mnist = torchvision.datasets.MNIST('../../data/', train=False, download=True)
             self.indices, self.offsets = ecc_py.batch_sparse(mnist.data.numpy() > int(255 * 0.8))
-            np.savez(load_file, indices=self.indices, offsets=self.offsets)
+            np.savez(self.file, indices=self.indices, offsets=self.offsets)
         else:
-            npz = np.load(load_file)
+            npz = np.load(self.file)
             self.indices, self.offsets = npz['indices'], npz['offsets']
 
     def __getitem__(self, index):
@@ -185,7 +191,7 @@ class Dataset:
     def __len__(self):
         return len(self.offsets)-1
 
-    def save_mnist(self):
+    def save(self):
         np.save(self.file, (self.indices, self.offsets))
 
 
@@ -193,11 +199,24 @@ class Net:
 
     def __init__(self, machine_shape: MachineShape):
         self.machine_shape = machine_shape
-        idx = len(machine_shape) - 1
-        self.layer: ecc_py.SwtaLayer = self.machine_shape.load_layer(idx)
+        self.idx = len(machine_shape) - 1
+        self.layer: ecc_py.SwtaLayer = self.machine_shape.load_layer(self.idx)
+        self.composed_shape = self.machine_shape.composed_conv(self.idx)
         if self.layer is None:
-            cs = self.machine_shape.shapes[idx]
+            cs = self.machine_shape.shapes[self.idx]
             self.layer = self.machine_shape.layer_type(cs, norm=2)
+
+    def layer_input_dataset(self):
+        return Dataset(self.machine_shape, self.idx)
+
+    def layer_output_dataset(self):
+        return Dataset(self.machine_shape, self.idx+1)
+
+    def sensor_input_dataset(self):
+        return Dataset(self.machine_shape, 0)
+
+    def layer_shape(self):
+        return self.machine_shape.shapes[self.idx]
 
     def train(self, plot=False, save=True,
               snapshots_per_sample=1,
@@ -218,10 +237,12 @@ class Net:
         iterations = params['iterations']
         interval = params['interval']
         test_patches = params['test_patches']
-        input_dataset = Dataset(self.machine_shape, idx)
-        mnist = Dataset(self.machine_shape, 0)
-        composed_shape = self.machine_shape.composed_conv(idx)
-        layer_shape = self.machine_shape.shapes[idx]
+        input_dataset = self.layer_input_dataset()
+        input_dataset.load()
+        mnist = self.sensor_input_dataset()
+        mnist.load()
+        composed_shape = self.composed_shape
+        layer_shape = self.layer_shape()
         test_patch_output_positions = np.random.randint((0,0), composed_shape.out_grid, (test_patches,2))
         test_input_patches = []
         test_img_patches = []
@@ -236,6 +257,7 @@ class Net:
         test_input_indices, test_input_offsets = ecc_py.join_sparse(test_input_patches)
         test_img_indices, test_img_offsets = ecc_py.join_sparse(test_img_patches)
         test_img_size = composed_shape.kernel_column_volume
+        test_empty_input_count = sum(test_input_offsets[1:] == test_input_offsets[:-1])
         del test_input_patches
         del test_img_patches
         print("PATCH_SIZE=", composed_shape.kernel_column_shape)
@@ -253,7 +275,7 @@ class Net:
             out_c = layer_shape.out_channels
             receptive_fields = ecc_py.receptive_field(out_c, pred_indices, pred_offsets, test_img_size, test_img_indices, test_img_offsets)
             receptive_fields = receptive_fields.reshape(composed_shape.minicolumn_receptive_field_shape)
-            missed = sum(pred_offsets[1:] == pred_offsets[:-1])
+            missed = sum(pred_offsets[1:] == pred_offsets[:-1]) - test_empty_input_count
             all_missed.append(missed / test_patches)
             print("missed=", all_missed)
             if plot:
@@ -286,12 +308,14 @@ class Net:
             plt.close(fig)
             # plt.show()
 
+    def save_layer_output_dataset(self):
+        pass
+
     def eval_with_classifier_head(self, overwrite_data=False, overwrite_benchmarks=False, epochs=4):
         idx = len(self.machine_shape) - 1
-        print("PATCH_SIZE=", self.m.in_shape)
-        layer = self.m.get_layer(idx)
+        print("SHAPE=", self.layer.shape)
         benchmarks_save = self.machine_shape.save_file(idx + 1) + " accuracy2.txt"
-        out_mnist = Mnist(self.machine_shape, idx + 1)
+        out_mnist = Dataset(self.machine_shape, idx + 1)
         if os.path.exists(out_mnist.file) and not overwrite_data:
             out_mnist.load()
         else:
@@ -366,8 +390,8 @@ class Net:
 
     def eval_with_naive_bayes(self, overwrite_data=False, overwrite_benchmarks=False, min_deviation_from_mean=None):
         idx = len(self.machine_shape) - 1
-        print("PATCH_SIZE=", self.m.in_shape)
-        layer = self.m.get_layer(idx)
+        print("PATCH_SIZE=", self.layer.in_shape)
+        layer = self.layer
         i = "I" if min_deviation_from_mean is not None else ""
         benchmarks_save = self.machine_shape.save_file(idx + 1) + " accuracy" + i + ".txt"
         out_mnist = Mnist(self.machine_shape, idx + 1)

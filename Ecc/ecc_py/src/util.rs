@@ -1,15 +1,12 @@
 
 use pyo3::prelude::*;
-use pyo3::{wrap_pyfunction, wrap_pymodule, PyObjectProtocol, PyIterProtocol, PySequenceProtocol, PyTypeInfo, PyDowncastError, AsPyPointer, PyNumberProtocol};
+use pyo3::{PyDowncastError, AsPyPointer};
 use pyo3::PyResult;
-use std::iter::FromIterator;
-use numpy::{PyReadonlyArrayDyn, PyArrayDyn, IntoPyArray, PyArray, PY_ARRAY_API, npyffi, Element, ToNpyDims, DataType};
-use numpy::npyffi::{NPY_ORDER, npy_intp, NPY_ARRAY_WRITEABLE};
-use std::os::raw::c_int;
-use std::fs::{File, OpenOptions};
+use numpy::{PyArrayDyn, npyffi, Element};
+use std::fs::{OpenOptions};
 use std::io::{BufReader, BufWriter};
 use pyo3::exceptions::PyValueError;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize};
 use serde::de::DeserializeOwned;
 
 
@@ -108,7 +105,7 @@ pub fn unpickle<T:DeserializeOwned>(file: String) -> PyResult<T> {
 }
 pub fn py_any_as_numpy<T:Element>(input: &PyAny) -> Result<&PyArrayDyn<T>, PyErr> {
     let array = unsafe {
-        if npyffi::PyArray_Check(input.as_ptr()) == 0 {
+        if npyffi::PyArray_Check(input.py(), input.as_ptr()) == 0 {
             return Err(PyDowncastError::new(input, "PyArray<T, D>").into());
         }
         &*(input as *const PyAny as *const PyArrayDyn<u8>)
@@ -116,9 +113,10 @@ pub fn py_any_as_numpy<T:Element>(input: &PyAny) -> Result<&PyArrayDyn<T>, PyErr
     if !array.is_c_contiguous(){
         return Err(PyValueError::new_err("Numpy array is not C contiguous"));
     }
-    let actual_dtype = array.dtype().get_datatype().ok_or_else(|| PyValueError::new_err("No numpy array has no dtype"))?;
-    if T::DATA_TYPE != actual_dtype {
-        return Err(PyValueError::new_err(format!("Expected numpy array of dtype {:?} but got {:?}", T::DATA_TYPE, actual_dtype)));
+    let actual_dtype = array.dtype();
+    let input_type = T::get_dtype(input.py());
+    if input_type.is_equiv_to(actual_dtype) {
+        return Err(PyValueError::new_err(format!("Expected numpy array of dtype {:?} but got {:?}", input_type, actual_dtype)));
     }
     let array = unsafe { &*(input as *const PyAny as *const PyArrayDyn<T>) };
     Ok(array)

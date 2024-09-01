@@ -17,7 +17,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 vf = {path= "../vf" }
-numpy = "0.13"
+numpy = "0.20.0"
 chrono = "0.4.19"
 serde = "1.0.166"
 rand = "0.8.4"
@@ -25,5 +25,5 @@ ciborium = "0.2.1"
 rand_distr = "0.4.3"
 
 [dependencies.pyo3]
-version = "0.13.2"
+version = "0.20.0"
 features = ["extension-module"]
